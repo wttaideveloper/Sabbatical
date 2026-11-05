@@ -3,11 +3,13 @@
 import Image from "next/image";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 
 const SPLASH_KEY = "is-splash-seen";
 const EASE = [0.22, 1, 0.36, 1] as const;
 
 export default function SplashScreen() {
+  const pathname = usePathname();
   const [show, setShow] = useState(false);
 
   useEffect(() => {
@@ -36,6 +38,8 @@ export default function SplashScreen() {
       clearTimeout(hideTimer);
     };
   }, []);
+
+  if (pathname.startsWith("/admin")) return null;
 
   return (
     <AnimatePresence>

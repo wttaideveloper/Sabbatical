@@ -1,0 +1,21 @@
+{
+  "kind": "collectionType",
+  "collectionName": "booking_services",
+  "info": {
+    "singularName": "booking-service",
+    "pluralName": "booking-services",
+    "displayName": "Booking Service",
+    "description": "Selectable service options on the Booking page"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "title": { "type": "string", "required": true },
+    "duration": { "type": "string" },
+    "price": { "type": "string" },
+    "description": { "type": "text" },
+    "order": { "type": "integer", "default": 0 }
+  }
+}

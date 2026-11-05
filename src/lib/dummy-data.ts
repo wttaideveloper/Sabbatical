@@ -71,6 +71,7 @@ export type Product = {
   price: number;
   blurb: string;
   swatch: string;
+  imageUrl?: string;
 };
 
 export const PRODUCTS: Product[] = [

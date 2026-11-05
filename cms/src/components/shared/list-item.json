@@ -1,0 +1,25 @@
+{
+  "collectionName": "components_shared_list_items",
+  "info": {
+    "displayName": "List Item",
+    "description": "A reusable numbered/titled item used in grids, checklists, and feature lists across the site"
+  },
+  "options": {},
+  "attributes": {
+    "number": {
+      "type": "string",
+      "description": "Optional index shown before the title, e.g. 01"
+    },
+    "title": {
+      "type": "string"
+    },
+    "body": {
+      "type": "text",
+      "required": true
+    },
+    "note": {
+      "type": "string",
+      "description": "Optional secondary line, e.g. a price or short highlight"
+    }
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "kind": "singleType",
+  "collectionName": "about_pages",
+  "info": {
+    "singularName": "about-page",
+    "pluralName": "about-pages",
+    "displayName": "About Page",
+    "description": "Content for the About page"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "heroEyebrow": { "type": "string", "default": "About" },
+    "heroTitle": { "type": "string", "required": true },
+    "heroLead": { "type": "text" },
+    "heroPhoto": { "type": "media", "multiple": false, "allowedTypes": ["images"] },
+    "heroBackgroundColor": { "type": "string", "regex": "^#[0-9A-Fa-f]{6}$" },
+    "heroTextColor": { "type": "string", "regex": "^#[0-9A-Fa-f]{6}$" },
+    "heroFontFamily": { "type": "enumeration", "enum": ["montserrat", "playfair", "lora", "cormorant", "inter"] },
+    "whyEyebrow": { "type": "string" },
+    "whyTitle": { "type": "string" },
+    "whyBody": { "type": "richtext" },
+    "goalEyebrow": { "type": "string" },
+    "goalTitle": { "type": "string" },
+    "goalBody": { "type": "richtext" },
+    "values": {
+      "type": "component",
+      "component": "shared.list-item",
+      "repeatable": true
+    },
+    "beyondEyebrow": { "type": "string" },
+    "beyondTitle": { "type": "string" },
+    "beyondBody": { "type": "richtext" },
+    "hikingPhoto": { "type": "media", "multiple": false, "allowedTypes": ["images"] },
+    "dogPhoto": { "type": "media", "multiple": false, "allowedTypes": ["images"] },
+    "ctaEyebrow": { "type": "string" },
+    "ctaTitle": { "type": "string" },
+    "customSections": { "type": "component", "component": "sections.custom-block", "repeatable": true }
+  }
+}

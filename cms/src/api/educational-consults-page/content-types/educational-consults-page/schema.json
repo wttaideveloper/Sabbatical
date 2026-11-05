@@ -1,0 +1,48 @@
+{
+  "kind": "singleType",
+  "collectionName": "educational_consults_pages",
+  "info": {
+    "singularName": "educational-consults-page",
+    "pluralName": "educational-consults-pages",
+    "displayName": "Educational Consults Page",
+    "description": "Content for the Educational Consults service page"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "heroEyebrow": { "type": "string", "default": "Clinically Guided Educational Consults" },
+    "heroTitle": { "type": "string", "required": true },
+    "heroLead": { "type": "text" },
+    "heroVideoUrl": {
+      "type": "string",
+      "description": "Optional embeddable video URL (e.g. YouTube) shown on this page"
+    },
+    "videoCaption": { "type": "string" },
+    "heroBackgroundColor": { "type": "string", "regex": "^#[0-9A-Fa-f]{6}$" },
+    "heroTextColor": { "type": "string", "regex": "^#[0-9A-Fa-f]{6}$" },
+    "heroFontFamily": { "type": "enumeration", "enum": ["montserrat", "playfair", "lora", "cormorant", "inter"] },
+    "whatEyebrow": { "type": "string", "default": "What This Is" },
+    "whatTitle": { "type": "string" },
+    "whatBody": { "type": "richtext" },
+    "exploreEyebrow": { "type": "string", "default": "We May Explore" },
+    "exploreTitle": { "type": "string" },
+    "exploreItems": {
+      "type": "component",
+      "component": "shared.list-item",
+      "repeatable": true
+    },
+    "fitEyebrow": { "type": "string", "default": "This May Be a Good Fit If" },
+    "fitTitle": { "type": "string" },
+    "fitItems": {
+      "type": "component",
+      "component": "shared.list-item",
+      "repeatable": true
+    },
+    "ctaEyebrow": { "type": "string", "default": "Ready When You Are" },
+    "ctaTitle": { "type": "string" },
+    "ctaBody": { "type": "text" },
+    "customSections": { "type": "component", "component": "sections.custom-block", "repeatable": true }
+  }
+}

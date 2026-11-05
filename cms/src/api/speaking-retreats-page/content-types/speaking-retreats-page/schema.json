@@ -1,0 +1,48 @@
+{
+  "kind": "singleType",
+  "collectionName": "speaking_retreats_pages",
+  "info": {
+    "singularName": "speaking-retreats-page",
+    "pluralName": "speaking-retreats-pages",
+    "displayName": "Speaking & Retreats Page",
+    "description": "Content for the Speaking & Retreats service page"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "heroEyebrow": { "type": "string", "default": "Speaking & Retreats" },
+    "heroTitle": { "type": "string", "required": true },
+    "heroLead": { "type": "text" },
+    "heroVideoUrl": {
+      "type": "string",
+      "description": "Optional embeddable video URL (e.g. YouTube) shown on this page"
+    },
+    "videoCaption": { "type": "string" },
+    "heroBackgroundColor": { "type": "string", "regex": "^#[0-9A-Fa-f]{6}$" },
+    "heroTextColor": { "type": "string", "regex": "^#[0-9A-Fa-f]{6}$" },
+    "heroFontFamily": { "type": "enumeration", "enum": ["montserrat", "playfair", "lora", "cormorant", "inter"] },
+    "forGroupsEyebrow": { "type": "string", "default": "For Groups & Gatherings" },
+    "forGroupsTitle": { "type": "string" },
+    "forGroupsBody": { "type": "richtext" },
+    "topicsEyebrow": { "type": "string", "default": "Topic Areas" },
+    "topicsTitle": { "type": "string" },
+    "topics": {
+      "type": "component",
+      "component": "shared.list-item",
+      "repeatable": true
+    },
+    "formatsEyebrow": { "type": "string", "default": "Formats" },
+    "formatsTitle": { "type": "string" },
+    "formats": {
+      "type": "component",
+      "component": "shared.list-item",
+      "repeatable": true
+    },
+    "ctaEyebrow": { "type": "string", "default": "Start a Conversation" },
+    "ctaTitle": { "type": "string" },
+    "ctaBody": { "type": "text" },
+    "customSections": { "type": "component", "component": "sections.custom-block", "repeatable": true }
+  }
+}

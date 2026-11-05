@@ -1,0 +1,44 @@
+{
+  "kind": "singleType",
+  "collectionName": "home_pages",
+  "info": {
+    "singularName": "home-page",
+    "pluralName": "home-pages",
+    "displayName": "Home Page",
+    "description": "Content for the main homepage"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "heroEyebrow": { "type": "string", "default": "Intimate Sabbatical" },
+    "heroTitle": { "type": "string", "required": true },
+    "heroSubtitle": { "type": "text" },
+    "heroImage": { "type": "media", "multiple": false, "allowedTypes": ["images"] },
+    "heroPrimaryLabel": { "type": "string", "default": "Work With Me" },
+    "heroPrimaryHref": { "type": "string", "default": "/booking" },
+    "heroSecondaryLabel": { "type": "string", "default": "Explore Resources" },
+    "heroSecondaryHref": { "type": "string", "default": "#services" },
+    "heroBackgroundColor": { "type": "string", "regex": "^#[0-9A-Fa-f]{6}$" },
+    "heroTextColor": { "type": "string", "regex": "^#[0-9A-Fa-f]{6}$" },
+    "heroFontFamily": { "type": "enumeration", "enum": ["montserrat", "playfair", "lora", "cormorant", "inter"] },
+    "introEyebrow": { "type": "string" },
+    "introTitle": { "type": "string" },
+    "introBody": { "type": "richtext" },
+    "modelEyebrow": { "type": "string" },
+    "modelTitle": { "type": "string" },
+    "modelNote": { "type": "text" },
+    "restoreEyebrow": { "type": "string" },
+    "restoreTitle": { "type": "string" },
+    "restoreBody": { "type": "richtext" },
+    "aboutTeaserEyebrow": { "type": "string" },
+    "aboutTeaserTitle": { "type": "string" },
+    "aboutTeaserBody": { "type": "richtext" },
+    "aboutTeaserImage": { "type": "media", "multiple": false, "allowedTypes": ["images"] },
+    "ctaEyebrow": { "type": "string" },
+    "ctaTitle": { "type": "string" },
+    "ctaBody": { "type": "text" },
+    "customSections": { "type": "component", "component": "sections.custom-block", "repeatable": true }
+  }
+}

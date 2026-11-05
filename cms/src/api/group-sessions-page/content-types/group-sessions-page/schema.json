@@ -1,0 +1,44 @@
+{
+  "kind": "singleType",
+  "collectionName": "group_sessions_pages",
+  "info": {
+    "singularName": "group-sessions-page",
+    "pluralName": "group-sessions-pages",
+    "displayName": "Group Sessions Page",
+    "description": "Content for the Group Sessions service page"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "heroEyebrow": { "type": "string", "default": "Live Group Sessions" },
+    "heroTitle": { "type": "string", "required": true },
+    "heroLead": { "type": "text" },
+    "heroVideoUrl": {
+      "type": "string",
+      "description": "Optional embeddable video URL (e.g. YouTube) shown on this page"
+    },
+    "videoCaption": { "type": "string" },
+    "heroBackgroundColor": { "type": "string", "regex": "^#[0-9A-Fa-f]{6}$" },
+    "heroTextColor": { "type": "string", "regex": "^#[0-9A-Fa-f]{6}$" },
+    "heroFontFamily": { "type": "enumeration", "enum": ["montserrat", "playfair", "lora", "cormorant", "inter"] },
+    "howEyebrow": { "type": "string", "default": "How It Works" },
+    "howTitle": { "type": "string" },
+    "howBody": { "type": "richtext" },
+    "seriesEyebrow": { "type": "string", "default": "A Sample Series" },
+    "seriesTitle": { "type": "string" },
+    "sessions": {
+      "type": "component",
+      "component": "shared.list-item",
+      "repeatable": true
+    },
+    "designedEyebrow": { "type": "string", "default": "Designed For" },
+    "designedTitle": { "type": "string" },
+    "designedBody": { "type": "richtext" },
+    "ctaEyebrow": { "type": "string", "default": "Upcoming Series" },
+    "ctaTitle": { "type": "string" },
+    "ctaBody": { "type": "text" },
+    "customSections": { "type": "component", "component": "sections.custom-block", "repeatable": true }
+  }
+}

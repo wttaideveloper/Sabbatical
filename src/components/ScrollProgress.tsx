@@ -1,14 +1,18 @@
 "use client";
 
 import { motion, useScroll, useSpring } from "motion/react";
+import { usePathname } from "next/navigation";
 
 export default function ScrollProgress() {
+  const pathname = usePathname();
   const { scrollYProgress } = useScroll();
   const scaleX = useSpring(scrollYProgress, {
     stiffness: 280,
     damping: 40,
     restDelta: 0.001,
   });
+
+  if (pathname.startsWith("/admin")) return null;
 
   return (
     <motion.div

@@ -7,6 +7,9 @@ import CtaBand from "@/components/CtaBand";
 import ServiceCard from "@/components/ServiceCard";
 import ParallaxImage from "@/components/ParallaxImage";
 import { Stagger, StaggerItem } from "@/components/Stagger";
+import CustomSections from "@/components/CustomSections";
+import { fontFamilyCssVar } from "@/lib/font-options";
+import { getHomePage, strapiImageUrl, toParagraphs } from "@/lib/strapi";
 
 const PILLARS = [
   {
@@ -23,23 +26,63 @@ const PILLARS = [
   },
 ];
 
-export default function HomePage() {
+const FALLBACK = {
+  heroEyebrow: "Intimate Sabbatical",
+  heroTitle: "Rediscover Intimacy. Reclaim You.",
+  heroSubtitle:
+    "Science-based education and compassionate support for women navigating perimenopause and beyond.",
+  heroImageSrc: "/assets/erika-hero.png",
+  heroPrimaryLabel: "Work With Me",
+  heroPrimaryHref: "/booking",
+  heroSecondaryLabel: "Explore Resources",
+  heroSecondaryHref: "#services",
+  introEyebrow: "One Place, Whole Picture",
+  introTitle: "One place where the whole person is considered.",
+  introBody:
+    "Intimate Sabbatical was created to close a gap: a place where sexual health is understood in context—not separated into disconnected symptoms.\n\nThe work is grounded in biological science and, when requested, informed by faith. Body, mind, relationships, history, beliefs, and the season of life you are in all belong in the same conversation.",
+  modelEyebrow: "The Biopsychosocial Model",
+  modelTitle: "Your sexuality lives at the intersection of three worlds.",
+  modelNote:
+    'Sexuality is not "just in your head." At midlife, biology often begins to drive more of the story—and understanding the biology can change how everything else makes sense.',
+  restoreEyebrow: "A Space to Understand",
+  restoreTitle: "Understand what changed. Restore what's possible.",
+  restoreBody:
+    "An integrated biopsychosocial approach looks at the whole picture together. We begin with the body, mind, and relationships rather than making you decide which specialist owns the problem before you even understand it.\n\nFor women who want it, a faith lens can be part of the conversation so education can reflect both biology and belief.",
+  aboutTeaserEyebrow: "Meet Erika",
+  aboutTeaserTitle: "Nurse Practitioner. Sexual Health Educator. Your Guide.",
+  aboutTeaserBody:
+    "My clinical career has centered on complex neurologic, pelvic, urologic, and sexual health concerns. Over time, one need became impossible to miss: people often need more room to slow down, learn, connect the dots, and understand what their bodies are telling them.\n\nI created Intimate Sabbatical to make sexual health understandable—to replace guessing with context, connect symptoms that are often treated separately, and help people feel less broken by changes they were never taught to expect.",
+  aboutTeaserImageSrc: "/assets/erika-portrait.png",
+  ctaEyebrow: "Ready When You Are",
+  ctaTitle: "You don't have to keep guessing at this.",
+  ctaBody:
+    "Wherever you're starting from, there is a way to begin: one conversation, one session, one weekend at a time.",
+};
+
+export default async function HomePage() {
+  const cms = await getHomePage();
+
+  const heroImageSrc = strapiImageUrl(cms?.heroImage) || FALLBACK.heroImageSrc;
+  const aboutTeaserImageSrc = strapiImageUrl(cms?.aboutTeaserImage) || FALLBACK.aboutTeaserImageSrc;
+
   return (
     <>
-      <section className="relative overflow-hidden border-b border-line bg-gradient-to-br from-white via-cream to-[#f2e4dd] sm:bg-none">
+      <section
+        className="relative overflow-hidden border-b border-line bg-gradient-to-br from-white via-cream to-[#f2e4dd] sm:bg-none"
+        style={cms?.heroBackgroundColor ? { background: cms.heroBackgroundColor } : undefined}
+      >
         <div className="absolute inset-y-0 right-0 hidden w-[58%] sm:block">
-          <ParallaxImage
-            src="/assets/erika-hero.png"
-            objectPosition="center 12%"
-            zoom={1.0}
-          />
+          <ParallaxImage src={heroImageSrc} objectPosition="center 12%" zoom={1.0} />
           <div className="pointer-events-none absolute inset-y-0 left-0 w-28 bg-gradient-to-r from-cream to-transparent lg:w-40" />
         </div>
         <Container className="relative flex min-h-0 items-center py-20 sm:min-h-[600px] sm:py-28 lg:min-h-[680px]">
           <Stagger className="max-w-md">
             <StaggerItem>
-              <h1 className="font-serif text-5xl font-medium leading-[1.08] text-burgundy sm:text-6xl">
-                Rediscover Intimacy. Reclaim You.
+              <h1
+                className="font-serif text-5xl font-medium leading-[1.08] text-burgundy sm:text-6xl"
+                style={{ color: cms?.heroTextColor || undefined, fontFamily: fontFamilyCssVar(cms?.heroFontFamily) }}
+              >
+                {cms?.heroTitle || FALLBACK.heroTitle}
               </h1>
             </StaggerItem>
             <StaggerItem>
@@ -47,15 +90,19 @@ export default function HomePage() {
             </StaggerItem>
             <StaggerItem>
               <p className="mb-9 text-base leading-relaxed text-muted">
-                Science-based education and compassionate support for women navigating
-                perimenopause and beyond.
+                {cms?.heroSubtitle || FALLBACK.heroSubtitle}
               </p>
             </StaggerItem>
             <StaggerItem>
               <div className="flex flex-wrap gap-3">
-                <Button href="/booking">Work With Me</Button>
-                <Button href="#services" variant="outline">
-                  Explore Resources
+                <Button href={cms?.heroPrimaryHref || FALLBACK.heroPrimaryHref}>
+                  {cms?.heroPrimaryLabel || FALLBACK.heroPrimaryLabel}
+                </Button>
+                <Button
+                  href={cms?.heroSecondaryHref || FALLBACK.heroSecondaryHref}
+                  variant="outline"
+                >
+                  {cms?.heroSecondaryLabel || FALLBACK.heroSecondaryLabel}
                 </Button>
               </div>
             </StaggerItem>
@@ -66,21 +113,17 @@ export default function HomePage() {
       <section className="border-b border-line py-28">
         <Container className="grid gap-16 lg:grid-cols-2">
           <Reveal>
-            <Eyebrow tone="coral">One Place, Whole Picture</Eyebrow>
+            <Eyebrow tone="coral">{cms?.introEyebrow || FALLBACK.introEyebrow}</Eyebrow>
             <h2 className="max-w-md text-4xl sm:text-5xl">
-              One place where the whole person is considered.
+              {cms?.introTitle || FALLBACK.introTitle}
             </h2>
           </Reveal>
           <Reveal delay={100} className="max-w-xl text-lg leading-relaxed text-ink/80">
-            <p className="mb-6">
-              Intimate Sabbatical was created to close a gap: a place where sexual health is
-              understood in context&mdash;not separated into disconnected symptoms.
-            </p>
-            <p>
-              The work is grounded in biological science and, when requested, informed by faith.
-              Body, mind, relationships, history, beliefs, and the season of life you are in all
-              belong in the same conversation.
-            </p>
+            {toParagraphs(cms?.introBody || FALLBACK.introBody).map((p, i) => (
+              <p key={i} className={i > 0 ? "" : "mb-6"}>
+                {p}
+              </p>
+            ))}
           </Reveal>
         </Container>
       </section>
@@ -88,10 +131,10 @@ export default function HomePage() {
       <section className="border-b border-line bg-cream-soft py-28">
         <Container>
           <Reveal className="mx-auto mb-16 max-w-2xl text-center">
-            <Eyebrow className="mx-auto justify-center">The Biopsychosocial Model</Eyebrow>
-            <h2 className="mb-4 text-4xl sm:text-5xl">
-              Your sexuality lives at the intersection of three worlds.
-            </h2>
+            <Eyebrow className="mx-auto justify-center">
+              {cms?.modelEyebrow || FALLBACK.modelEyebrow}
+            </Eyebrow>
+            <h2 className="mb-4 text-4xl sm:text-5xl">{cms?.modelTitle || FALLBACK.modelTitle}</h2>
             <p className="text-lg text-ink/75">When one changes, the others can too.</p>
           </Reveal>
 
@@ -106,10 +149,11 @@ export default function HomePage() {
             </div>
           </Reveal>
 
-          <Reveal delay={150} className="mx-auto mt-12 max-w-2xl border-l-2 border-coral pl-6 text-lg text-ink/80">
-            Sexuality is not &ldquo;just in your head.&rdquo; At midlife, biology often begins to
-            drive more of the story&mdash;and understanding the biology can change how everything
-            else makes sense.
+          <Reveal
+            delay={150}
+            className="mx-auto mt-12 max-w-2xl border-l-2 border-coral pl-6 text-lg text-ink/80"
+          >
+            {cms?.modelNote || FALLBACK.modelNote}
           </Reveal>
         </Container>
       </section>
@@ -124,21 +168,17 @@ export default function HomePage() {
         />
         <Container className="relative grid gap-14 lg:grid-cols-2">
           <Reveal>
-            <Eyebrow tone="light">A Space to Understand</Eyebrow>
+            <Eyebrow tone="light">{cms?.restoreEyebrow || FALLBACK.restoreEyebrow}</Eyebrow>
             <h2 className="max-w-lg text-4xl text-white sm:text-5xl">
-              Understand what changed. Restore what&rsquo;s possible.
+              {cms?.restoreTitle || FALLBACK.restoreTitle}
             </h2>
           </Reveal>
           <Reveal delay={100} className="max-w-xl text-white/80">
-            <p className="mb-6 text-lg leading-relaxed">
-              An integrated biopsychosocial approach looks at the whole picture together. We begin
-              with the body, mind, and relationships rather than making you decide which
-              specialist owns the problem before you even understand it.
-            </p>
-            <p className="text-lg leading-relaxed">
-              For women who want it, a faith lens can be part of the conversation so education can
-              reflect both biology and belief.
-            </p>
+            {toParagraphs(cms?.restoreBody || FALLBACK.restoreBody).map((p, i) => (
+              <p key={i} className={`text-lg leading-relaxed ${i > 0 ? "mt-6" : ""}`}>
+                {p}
+              </p>
+            ))}
           </Reveal>
         </Container>
       </section>
@@ -148,7 +188,7 @@ export default function HomePage() {
           <Reveal className="relative">
             <div className="absolute -inset-x-5 -bottom-5 -top-5 -z-10 rounded-2xl border border-line" />
             <Image
-              src="/assets/erika-portrait.png"
+              src={aboutTeaserImageSrc}
               alt="Erika, nurse practitioner and sexual health educator"
               width={640}
               height={760}
@@ -156,21 +196,15 @@ export default function HomePage() {
             />
           </Reveal>
           <Reveal delay={100}>
-            <Eyebrow tone="coral">Meet Erika</Eyebrow>
+            <Eyebrow tone="coral">{cms?.aboutTeaserEyebrow || FALLBACK.aboutTeaserEyebrow}</Eyebrow>
             <h2 className="mb-6 text-4xl sm:text-5xl">
-              Nurse Practitioner. Sexual Health Educator. Your Guide.
+              {cms?.aboutTeaserTitle || FALLBACK.aboutTeaserTitle}
             </h2>
-            <p className="mb-5 text-[17px] leading-relaxed text-ink/80">
-              My clinical career has centered on complex neurologic, pelvic, urologic, and sexual
-              health concerns. Over time, one need became impossible to miss: people often need
-              more room to slow down, learn, connect the dots, and understand what their bodies
-              are telling them.
-            </p>
-            <p className="mb-8 text-[17px] leading-relaxed text-ink/80">
-              I created Intimate Sabbatical to make sexual health understandable&mdash;to replace
-              guessing with context, connect symptoms that are often treated separately, and help
-              people feel less broken by changes they were never taught to expect.
-            </p>
+            {toParagraphs(cms?.aboutTeaserBody || FALLBACK.aboutTeaserBody).map((p, i) => (
+              <p key={i} className="mb-5 text-[17px] leading-relaxed text-ink/80 last:mb-8">
+                {p}
+              </p>
+            ))}
             <Button href="/about" variant="outline">
               Meet Erika
             </Button>
@@ -221,11 +255,13 @@ export default function HomePage() {
 
       <CtaBand
         id="consult"
-        eyebrow="Ready When You Are"
-        title="You don't have to keep guessing at this."
-        body="Wherever you're starting from, there is a way to begin: one conversation, one session, one weekend at a time."
+        eyebrow={cms?.ctaEyebrow || FALLBACK.ctaEyebrow}
+        title={cms?.ctaTitle || FALLBACK.ctaTitle}
+        body={cms?.ctaBody || FALLBACK.ctaBody}
         primaryCta={{ label: "Book a Consult", href: "/booking" }}
       />
+
+      <CustomSections blocks={cms?.customSections ?? []} />
     </>
   );
 }

@@ -1,0 +1,64 @@
+{
+  "collectionName": "components_sections_custom_blocks",
+  "info": {
+    "displayName": "Custom Section Block",
+    "description": "A flexible, admin-added content block appended to the end of a page"
+  },
+  "options": {},
+  "attributes": {
+    "blockType": {
+      "type": "enumeration",
+      "enum": ["text", "cta", "quote", "video"],
+      "default": "text",
+      "description": "Which kind of block this is — determines which of the fields below apply"
+    },
+    "heading": {
+      "type": "string"
+    },
+    "body": {
+      "type": "richtext",
+      "description": "Body text (text block), quote text (quote block), or caption (video block)"
+    },
+    "image": {
+      "type": "media",
+      "multiple": false,
+      "allowedTypes": ["images"]
+    },
+    "backgroundColor": {
+      "type": "string",
+      "regex": "^#[0-9A-Fa-f]{6}$",
+      "description": "Hex color, e.g. #F7F1EC"
+    },
+    "textColor": {
+      "type": "string",
+      "regex": "^#[0-9A-Fa-f]{6}$",
+      "description": "Hex color, e.g. #1C1517"
+    },
+    "fontFamily": {
+      "type": "enumeration",
+      "enum": ["montserrat", "playfair", "lora", "cormorant", "inter"]
+    },
+    "layout": {
+      "type": "enumeration",
+      "enum": ["image-left", "image-right", "image-top", "text-only"],
+      "default": "image-right",
+      "description": "Used by the text block only"
+    },
+    "ctaLabel": {
+      "type": "string",
+      "description": "Button label — used by the cta block only"
+    },
+    "ctaHref": {
+      "type": "string",
+      "description": "Button link — used by the cta block only"
+    },
+    "attribution": {
+      "type": "string",
+      "description": "Who said it, e.g. a name and title — used by the quote block only"
+    },
+    "videoUrl": {
+      "type": "string",
+      "description": "YouTube/Vimeo link or a direct video file URL — used by the video block only"
+    }
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "kind": "singleType",
+  "collectionName": "site_settings",
+  "info": {
+    "singularName": "site-setting",
+    "pluralName": "site-settings",
+    "displayName": "Site Settings",
+    "description": "Sitewide logo, contact info, and social links"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "logo": {
+      "type": "media",
+      "multiple": false,
+      "required": false,
+      "allowedTypes": ["images"]
+    },
+    "logoReversed": {
+      "type": "media",
+      "multiple": false,
+      "required": false,
+      "allowedTypes": ["images"],
+      "description": "Light/cream logo variant for use on dark backgrounds (e.g. the footer)"
+    },
+    "footerTagline": {
+      "type": "string",
+      "default": "Sexual Wellness Education"
+    },
+    "contactEmail": {
+      "type": "email"
+    },
+    "instagramUrl": {
+      "type": "string"
+    },
+    "youtubeUrl": {
+      "type": "string"
+    },
+    "footerDisclaimer": {
+      "type": "text",
+      "default": "Education only. Not a substitute for individualized medical diagnosis or treatment."
+    },
+    "headerBackgroundColor": {
+      "type": "string",
+      "regex": "^#[0-9A-Fa-f]{6}$"
+    },
+    "footerBackgroundColor": {
+      "type": "string",
+      "regex": "^#[0-9A-Fa-f]{6}$"
+    },
+    "headerTextColor": {
+      "type": "string",
+      "regex": "^#[0-9A-Fa-f]{6}$"
+    },
+    "footerTextColor": {
+      "type": "string",
+      "regex": "^#[0-9A-Fa-f]{6}$"
+    },
+    "headerFooterFontFamily": {
+      "type": "enumeration",
+      "enum": ["montserrat", "playfair", "lora", "cormorant", "inter"]
+    },
+    "headerFooterFontSize": {
+      "type": "enumeration",
+      "enum": ["sm", "base", "lg"],
+      "default": "base"
+    }
+  }
+}

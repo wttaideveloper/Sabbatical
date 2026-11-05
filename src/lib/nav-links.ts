@@ -1,24 +1,28 @@
-export type NavLink = {
+export type MenuItem = {
   label: string;
   href: string;
+  group: "primary" | "services" | "resources" | "secondary";
+  order: number;
+  openInNewTab?: boolean;
 };
 
-export const PRIMARY_LINKS: NavLink[] = [
-  { label: "Home", href: "/" },
-  { label: "About", href: "/about" },
+/**
+ * Used when Strapi is unreachable (getMenuItems() returns null) — same shape as
+ * MenuItemEntry from lib/strapi so SiteHeader never needs to branch on where the
+ * data came from.
+ */
+export const FALLBACK_MENU_ITEMS: MenuItem[] = [
+  { label: "Home", href: "/", group: "primary", order: 0 },
+  { label: "About", href: "/about", group: "primary", order: 1 },
+  { label: "Educational Consults", href: "/educational-consults", group: "services", order: 0 },
+  { label: "Group Sessions", href: "/group-sessions", group: "services", order: 1 },
+  { label: "Speaking & Retreats", href: "/speaking-retreats", group: "services", order: 2 },
+  { label: "All Resources", href: "/resources", group: "resources", order: 0 },
+  { label: "Blog", href: "/blog", group: "resources", order: 1 },
+  { label: "Videos", href: "/videos", group: "resources", order: 2 },
+  { label: "FAQ", href: "/faq", group: "resources", order: 3 },
+  { label: "Shop", href: "/shop", group: "secondary", order: 0 },
+  { label: "Contact", href: "/contact", group: "secondary", order: 1 },
 ];
-
-export const SERVICE_LINKS: NavLink[] = [
-  { label: "Educational Consults", href: "/educational-consults" },
-  { label: "Group Sessions", href: "/group-sessions" },
-  { label: "Speaking & Retreats", href: "/speaking-retreats" },
-];
-
-export const SECONDARY_LINKS: NavLink[] = [
-  { label: "Blog", href: "/blog" },
-  { label: "Shop", href: "/shop" },
-];
-
-export const NAV_LINKS: NavLink[] = [...PRIMARY_LINKS, ...SERVICE_LINKS, ...SECONDARY_LINKS];
 
 export const CONTACT_EMAIL = "hello@intimatesabbatical.com";

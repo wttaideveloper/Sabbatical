@@ -1,0 +1,26 @@
+{
+  "kind": "collectionType",
+  "collectionName": "menu_items",
+  "info": {
+    "singularName": "menu-item",
+    "pluralName": "menu-items",
+    "displayName": "Menu Item",
+    "description": "A single entry in the site's primary navigation"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "label": { "type": "string", "required": true },
+    "href": { "type": "string", "required": true },
+    "openInNewTab": { "type": "boolean", "default": false },
+    "group": {
+      "type": "enumeration",
+      "enum": ["primary", "services", "resources", "secondary"],
+      "required": true,
+      "default": "primary"
+    },
+    "order": { "type": "integer", "default": 0 }
+  }
+}

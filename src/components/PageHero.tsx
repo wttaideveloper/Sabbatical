@@ -6,6 +6,7 @@ import Container from "./Container";
 import Eyebrow from "./Eyebrow";
 import Button from "./Button";
 import { Stagger, StaggerItem } from "./Stagger";
+import { fontFamilyCssVar } from "@/lib/font-options";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -15,16 +16,27 @@ export default function PageHero({
   lead,
   cta,
   photo,
+  backgroundColor,
+  textColor,
+  fontFamily,
 }: {
   eyebrow: string;
   title: string;
   lead: string;
   cta?: { label: string; href: string };
   photo?: string;
+  /** Admin-set hero theming overrides — all optional, undefined when unset so every
+   *  page using PageHero without them (shop, blog, faq, etc.) keeps today's fixed look. */
+  backgroundColor?: string;
+  textColor?: string;
+  fontFamily?: string;
 }) {
+  const sectionStyle = backgroundColor ? { background: backgroundColor } : undefined;
+  const titleStyle = { color: textColor || undefined, fontFamily: fontFamilyCssVar(fontFamily) };
+
   if (photo) {
     return (
-      <section className="relative overflow-hidden border-b border-line">
+      <section className="relative overflow-hidden border-b border-line" style={sectionStyle}>
         <div className="relative h-[340px] sm:hidden">
           <motion.div
             className="absolute inset-0"
@@ -67,7 +79,10 @@ export default function PageHero({
               <Eyebrow>{eyebrow}</Eyebrow>
             </StaggerItem>
             <StaggerItem>
-              <h1 className="mb-6 font-serif text-4xl font-medium leading-[1.05] text-burgundy sm:text-5xl lg:text-6xl">
+              <h1
+                className="mb-6 font-serif text-4xl font-medium leading-[1.05] text-burgundy sm:text-5xl lg:text-6xl"
+                style={titleStyle}
+              >
                 {title}
               </h1>
             </StaggerItem>
@@ -81,14 +96,20 @@ export default function PageHero({
   }
 
   return (
-    <section className="border-b border-line bg-gradient-to-br from-white via-cream to-[#f2e4dd]">
+    <section
+      className="border-b border-line bg-gradient-to-br from-white via-cream to-[#f2e4dd]"
+      style={sectionStyle}
+    >
       <Container className="flex items-center py-16 sm:min-h-[480px] sm:py-24">
         <Stagger className="max-w-2xl">
           <StaggerItem>
             <Eyebrow>{eyebrow}</Eyebrow>
           </StaggerItem>
           <StaggerItem>
-            <h1 className="mb-6 font-serif text-4xl font-medium leading-[1.05] text-burgundy sm:text-5xl lg:text-6xl">
+            <h1
+              className="mb-6 font-serif text-4xl font-medium leading-[1.05] text-burgundy sm:text-5xl lg:text-6xl"
+              style={titleStyle}
+            >
               {title}
             </h1>
           </StaggerItem>

@@ -3,6 +3,7 @@ import Link from "next/link";
 import Container from "@/components/Container";
 import PageHero from "@/components/PageHero";
 import Reveal from "@/components/Reveal";
+import { getBlogPosts } from "@/lib/strapi";
 import { BLOG_POSTS } from "@/lib/dummy-data";
 
 export const metadata: Metadata = {
@@ -10,7 +11,19 @@ export const metadata: Metadata = {
   description: "Notes on sexual health, hormones, pelvic health, and midlife wellness.",
 };
 
-export default function BlogPage() {
+export default async function BlogPage() {
+  const cmsPosts = await getBlogPosts();
+  const posts = cmsPosts.length
+    ? cmsPosts.map((p) => ({
+        slug: p.slug,
+        category: p.category || "",
+        title: p.title,
+        excerpt: p.excerpt || "",
+        date: p.publishedDate || "",
+        readTime: p.readTime || "",
+      }))
+    : BLOG_POSTS;
+
   return (
     <>
       <PageHero
@@ -22,7 +35,7 @@ export default function BlogPage() {
       <section className="py-16 sm:py-24">
         <Container>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {BLOG_POSTS.map((post, i) => (
+            {posts.map((post, i) => (
               <Reveal key={`${post.slug}-${i}`} delay={(i % 3) * 80}>
                 <Link
                   href={`/blog/${post.slug}`}

@@ -4,6 +4,9 @@ import Eyebrow from "@/components/Eyebrow";
 import Reveal from "@/components/Reveal";
 import PageHero from "@/components/PageHero";
 import CtaBand from "@/components/CtaBand";
+import VideoEmbed from "@/components/VideoEmbed";
+import CustomSections from "@/components/CustomSections";
+import { getGroupSessionsPage, toParagraphs } from "@/lib/strapi";
 
 export const metadata: Metadata = {
   title: "Group Sessions",
@@ -11,7 +14,7 @@ export const metadata: Metadata = {
     "Small live series designed to make sexual health understandable, practical, and less awkward to talk about.",
 };
 
-const SERIES = [
+const FALLBACK_SESSIONS = [
   {
     number: "01",
     title: "The Biology of Sex",
@@ -25,7 +28,7 @@ const SERIES = [
   {
     number: "03",
     title: "Partner Dynamics & Desire",
-    body: "Responsive desire, mismatched desire, communication, context, expectations, and why “just try harder” does not work.",
+    body: 'Responsive desire, mismatched desire, communication, context, expectations, and why "just try harder" does not work.',
   },
   {
     number: "04",
@@ -34,34 +37,51 @@ const SERIES = [
   },
 ];
 
-export default function GroupSessionsPage() {
+export default async function GroupSessionsPage() {
+  const cms = await getGroupSessionsPage();
+  const sessions = cms?.sessions?.length ? cms.sessions : FALLBACK_SESSIONS;
+  const videoUrl = cms?.heroVideoUrl;
+
   return (
     <>
       <PageHero
-        eyebrow="Live Group Sessions"
-        title="Learn the science. Ask the questions."
-        lead="Small live series—typically three or four sessions—designed to make sexual health understandable, practical, and less awkward to talk about."
+        eyebrow={cms?.heroEyebrow || "Live Group Sessions"}
+        title={cms?.heroTitle || "Learn the science. Ask the questions."}
+        lead={
+          cms?.heroLead ||
+          "Small live series—typically three or four sessions—designed to make sexual health understandable, practical, and less awkward to talk about."
+        }
         cta={{ label: "View Upcoming Series", href: "#series" }}
+        backgroundColor={cms?.heroBackgroundColor}
+        textColor={cms?.heroTextColor}
+        fontFamily={cms?.heroFontFamily}
       />
+
+      {videoUrl && (
+        <section className="border-b border-line py-20">
+          <Container className="mx-auto max-w-3xl">
+            <VideoEmbed url={videoUrl} />
+          </Container>
+        </section>
+      )}
 
       <section className="border-b border-line py-28">
         <Container className="grid gap-16 lg:grid-cols-2">
           <Reveal>
-            <Eyebrow tone="coral">How It Works</Eyebrow>
+            <Eyebrow tone="coral">{cms?.howEyebrow || "How It Works"}</Eyebrow>
             <h2 className="max-w-md text-4xl sm:text-5xl">
-              Structured teaching with live Q&amp;A.
+              {cms?.howTitle || "Structured teaching with live Q&A."}
             </h2>
           </Reveal>
           <Reveal delay={100} className="max-w-xl text-lg leading-relaxed text-ink/80">
-            <p className="mb-6">
-              Each group series goes deep enough to be useful without turning into a
-              medical-school lecture. We build the biology first, then layer in the
-              psychological, relational, and real-life pieces.
-            </p>
-            <p>
-              Sessions are delivered live, with dedicated time for questions so you can hear the
-              answers to things many women are wondering but rarely have an opportunity to ask.
-            </p>
+            {toParagraphs(
+              cms?.howBody ||
+                "Each group series goes deep enough to be useful without turning into a medical-school lecture. We build the biology first, then layer in the psychological, relational, and real-life pieces.\n\nSessions are delivered live, with dedicated time for questions so you can hear the answers to things many women are wondering but rarely have an opportunity to ask."
+            ).map((p, i) => (
+              <p key={i} className={i > 0 ? "" : "mb-6"}>
+                {p}
+              </p>
+            ))}
           </Reveal>
         </Container>
       </section>
@@ -69,14 +89,18 @@ export default function GroupSessionsPage() {
       <section className="border-b border-line bg-cream-soft py-28" id="series">
         <Container>
           <Reveal className="mb-14 max-w-xl">
-            <Eyebrow>A Sample Series</Eyebrow>
-            <h2 className="text-4xl sm:text-5xl">Three or four evenings. One connected story.</h2>
+            <Eyebrow>{cms?.seriesEyebrow || "A Sample Series"}</Eyebrow>
+            <h2 className="text-4xl sm:text-5xl">
+              {cms?.seriesTitle || "Three or four evenings. One connected story."}
+            </h2>
           </Reveal>
           <div className="grid gap-4">
-            {SERIES.map((item, i) => (
-              <Reveal key={item.number} delay={i * 80}>
+            {sessions.map((item, i) => (
+              <Reveal key={i} delay={i * 80}>
                 <article className="grid grid-cols-[64px_1fr] items-start gap-6 rounded-2xl border border-line bg-white p-8 sm:grid-cols-[86px_1fr]">
-                  <span className="font-serif text-4xl text-coral sm:text-5xl">{item.number}</span>
+                  <span className="font-serif text-4xl text-coral sm:text-5xl">
+                    {item.number}
+                  </span>
                   <div>
                     <h3 className="mb-2">{item.title}</h3>
                     <p className="text-sm leading-relaxed text-muted">{item.body}</p>
@@ -91,33 +115,38 @@ export default function GroupSessionsPage() {
       <section className="border-b border-line py-28">
         <Container className="grid gap-16 lg:grid-cols-[0.85fr_1.15fr]">
           <Reveal>
-            <Eyebrow tone="coral">Designed For</Eyebrow>
-            <h2 className="text-4xl sm:text-5xl">Women who want more than a sound bite.</h2>
+            <Eyebrow tone="coral">{cms?.designedEyebrow || "Designed For"}</Eyebrow>
+            <h2 className="text-4xl sm:text-5xl">
+              {cms?.designedTitle || "Women who want more than a sound bite."}
+            </h2>
           </Reveal>
           <Reveal delay={100} className="max-w-xl text-lg leading-relaxed text-ink/80">
-            <p className="mb-6">
-              You do not need to have a diagnosis, a partner, or a specific sexual concern to
-              participate. These sessions are for anyone who wants a better working understanding
-              of sexual health, especially during seasons of hormonal and life transition.
-            </p>
-            <p>
-              Group education is not individualized medical care. It is a way to learn the
-              framework, hear common questions answered, and become better prepared for your own
-              conversations with clinicians and partners.
-            </p>
+            {toParagraphs(
+              cms?.designedBody ||
+                "You do not need to have a diagnosis, a partner, or a specific sexual concern to participate. These sessions are for anyone who wants a better working understanding of sexual health, especially during seasons of hormonal and life transition.\n\nGroup education is not individualized medical care. It is a way to learn the framework, hear common questions answered, and become better prepared for your own conversations with clinicians and partners."
+            ).map((p, i) => (
+              <p key={i} className={i > 0 ? "" : "mb-6"}>
+                {p}
+              </p>
+            ))}
           </Reveal>
         </Container>
       </section>
 
       <CtaBand
-        eyebrow="Upcoming Series"
-        title="Join the next live group."
-        body="Dates and topics can be added here as soon as your next series is scheduled."
+        eyebrow={cms?.ctaEyebrow || "Upcoming Series"}
+        title={cms?.ctaTitle || "Join the next live group."}
+        body={
+          cms?.ctaBody ||
+          "Dates and topics can be added here as soon as your next series is scheduled."
+        }
         primaryCta={{
           label: "Ask About the Next Series",
           href: "mailto:hello@intimatesabbatical.com?subject=Group%20Sessions",
         }}
       />
+
+      <CustomSections blocks={cms?.customSections ?? []} />
     </>
   );
 }

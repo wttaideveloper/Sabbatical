@@ -5,13 +5,21 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { NAV_LINKS, PRIMARY_LINKS, SECONDARY_LINKS } from "@/lib/nav-links";
-import CartButton from "./CartButton";
-import ServicesDropdown from "./ServicesDropdown";
+import { FALLBACK_MENU_ITEMS, type MenuItem } from "@/lib/nav-links";
+import type { MenuItemEntry, SiteSetting } from "@/lib/strapi";
+import { fontFamilyCssVar } from "@/lib/font-options";
+import { fontSizeRem } from "@/lib/font-size-options";
+import NavDropdown from "./NavDropdown";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
-export default function SiteHeader() {
+export default function SiteHeader({
+  menuItems,
+  siteSetting,
+}: {
+  menuItems: MenuItemEntry[] | null;
+  siteSetting: SiteSetting | null;
+}) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [lastPathname, setLastPathname] = useState(pathname);
@@ -21,8 +29,38 @@ export default function SiteHeader() {
     setOpen(false);
   }
 
+  if (pathname.startsWith("/admin")) return null;
+
+  // Treat an empty collection the same as "unreachable" — a genuinely empty
+  // header (before the admin has ever used the menu manager, or if every item
+  // was removed) should show the sensible default nav, not nothing at all.
+  const items: MenuItem[] = menuItems && menuItems.length > 0 ? menuItems : FALLBACK_MENU_ITEMS;
+  const byGroup = (group: MenuItem["group"]) =>
+    items.filter((i) => i.group === group).sort((a, b) => a.order - b.order);
+  const primary = byGroup("primary");
+  const services = byGroup("services");
+  const resources = byGroup("resources");
+  const secondary = byGroup("secondary");
+  const mobileItems = [...primary, ...services, ...resources, ...secondary];
+
+  const headerStyle = siteSetting?.headerBackgroundColor
+    ? {
+        backgroundColor: siteSetting.headerBackgroundColor,
+        color: siteSetting.headerTextColor || undefined,
+        fontFamily: fontFamilyCssVar(siteSetting.headerFooterFontFamily),
+        fontSize: fontSizeRem(siteSetting.headerFooterFontSize),
+      }
+    : undefined;
+  const linkClassName = (isActive: boolean) =>
+    `relative shrink-0 whitespace-nowrap rounded-full px-4 py-2 transition-colors ${
+      isActive ? "text-burgundy" : headerStyle ? "" : "text-ink hover:text-coral"
+    }`;
+
   return (
-    <header className="sticky top-0 z-50 border-b border-line bg-cream/95 backdrop-blur-md">
+    <header
+      className="sticky top-0 z-50 border-b border-line bg-cream/95 backdrop-blur-md"
+      style={headerStyle}
+    >
       <div className="mx-auto flex h-20 w-full max-w-[1240px] items-center justify-between px-6 sm:px-8 lg:px-10">
         <Link href="/" aria-label="Intimate Sabbatical home" className="shrink-0">
           <motion.div
@@ -43,17 +81,10 @@ export default function SiteHeader() {
         </Link>
 
         <nav className="hidden items-center gap-1 text-[11px] font-medium uppercase tracking-[0.12em] lg:flex">
-          {PRIMARY_LINKS.map((link) => {
-            const isActive =
-              link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
+          {primary.map((link) => {
+            const isActive = link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
             return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`relative shrink-0 whitespace-nowrap rounded-full px-4 py-2 transition-colors ${
-                  isActive ? "text-burgundy" : "text-ink hover:text-coral"
-                }`}
-              >
+              <Link key={link.href} href={link.href} className={linkClassName(isActive)}>
                 {isActive && (
                   <motion.span
                     layoutId="nav-pill"
@@ -65,17 +96,12 @@ export default function SiteHeader() {
               </Link>
             );
           })}
-          <ServicesDropdown />
-          {SECONDARY_LINKS.map((link) => {
+          <NavDropdown label="Services" items={services} />
+          <NavDropdown label="Resources" items={resources} />
+          {secondary.map((link) => {
             const isActive = pathname.startsWith(link.href);
             return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`relative shrink-0 whitespace-nowrap rounded-full px-4 py-2 transition-colors ${
-                  isActive ? "text-burgundy" : "text-ink hover:text-coral"
-                }`}
-              >
+              <Link key={link.href} href={link.href} className={linkClassName(isActive)}>
                 {isActive && (
                   <motion.span
                     layoutId="nav-pill"
@@ -88,7 +114,6 @@ export default function SiteHeader() {
             );
           })}
           <div className="ml-2 flex shrink-0 items-center gap-3">
-            <CartButton />
             <motion.div
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
@@ -105,7 +130,6 @@ export default function SiteHeader() {
         </nav>
 
         <div className="flex items-center gap-2 lg:hidden">
-          <CartButton />
           <button
             type="button"
             aria-label={open ? "Close menu" : "Open menu"}
@@ -147,9 +171,12 @@ export default function SiteHeader() {
                 closed: {},
               }}
             >
-              {NAV_LINKS.map((link) => {
+              {mobileItems.map((link) => {
                 const isActive =
                   link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
+                const className = `block rounded-full px-4 py-3 transition-colors ${
+                  isActive ? "bg-burgundy/10 text-burgundy" : "text-ink hover:text-coral"
+                }`;
                 return (
                   <motion.div
                     key={link.href}
@@ -159,14 +186,15 @@ export default function SiteHeader() {
                     }}
                     transition={{ duration: 0.3, ease: EASE }}
                   >
-                    <Link
-                      href={link.href}
-                      className={`block rounded-full px-4 py-3 transition-colors ${
-                        isActive ? "bg-burgundy/10 text-burgundy" : "text-ink hover:text-coral"
-                      }`}
-                    >
-                      {link.label}
-                    </Link>
+                    {link.openInNewTab ? (
+                      <a href={link.href} target="_blank" rel="noopener noreferrer" className={className}>
+                        {link.label}
+                      </a>
+                    ) : (
+                      <Link href={link.href} className={className}>
+                        {link.label}
+                      </Link>
+                    )}
                   </motion.div>
                 );
               })}
