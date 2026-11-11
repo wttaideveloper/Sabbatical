@@ -1,5 +1,6 @@
 "use server";
 
+import { assertAdmin } from "@/lib/admin-auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getSingleTypeForEdit, updateSingleType, publishDocument, resolveMediaRelation } from "@/lib/strapi-admin";
@@ -7,6 +8,7 @@ import { str } from "@/lib/admin-form";
 import type { SiteSetting } from "@/lib/strapi";
 
 export async function saveSiteSettings(mode: "draft" | "publish", formData: FormData) {
+  await assertAdmin();
   let logoId: number | undefined;
   try {
     logoId = await resolveMediaRelation(formData, "logo");
@@ -51,5 +53,6 @@ export async function saveSiteSettings(mode: "draft" | "publish", formData: Form
 }
 
 export async function loadSiteSettings() {
+  await assertAdmin();
   return getSingleTypeForEdit<SiteSetting>("site-setting");
 }

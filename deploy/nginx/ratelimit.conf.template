@@ -1,0 +1,22 @@
+# =============================================================================
+# Intimate Sabbatical — login rate-limit zones (nginx `http` context)  — TEMPLATE
+#
+# Install as its OWN new file in a directory that nginx includes at the http level, e.g.
+#     /etc/nginx/conf.d/intimate-sabbatical-ratelimit.conf
+# (Ubuntu's stock nginx.conf includes /etc/nginx/conf.d/*.conf inside `http { }`.)
+#
+# It must be installed BEFORE web.conf / cms.conf, because those reference these zones.
+# The zone names are prefixed "intimate_sabbatical_" so they cannot collide with the zones of any
+# other project on this server. Do not edit any existing file to add this.
+#
+# $binary_remote_addr is the real client IP as long as nginx is the first hop. If a CDN or another
+# proxy sits in front of nginx, configure the real-IP module accordingly or every visitor will
+# share one bucket.
+# =============================================================================
+
+# Custom Next.js /admin/login — 10 requests/minute per IP (the app additionally locks an IP out
+# after 5 failed passwords in 15 minutes).
+limit_req_zone $binary_remote_addr zone=intimate_sabbatical_login:2m rate=10r/m;
+
+# Strapi admin login endpoint on the CMS host.
+limit_req_zone $binary_remote_addr zone=intimate_sabbatical_cms_login:2m rate=10r/m;

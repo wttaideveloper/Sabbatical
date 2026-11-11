@@ -1,0 +1,29 @@
+# =============================================================================
+# Intimate Sabbatical — port 80 (ACME challenge + redirect to HTTPS)  — TEMPLATE
+#
+# Install as a NEW file, e.g. /etc/nginx/sites-available/intimate-sabbatical-http.conf, then symlink
+# it into sites-enabled. It only matches the two NEW server names below, so it cannot affect any
+# existing site. Replace both placeholders (the real domains are created later).
+#
+# Install THIS file first: Let's Encrypt validates over port 80 before the HTTPS blocks
+# (web.conf / cms.conf) can exist, because those reference the certificates it issues.
+#
+# The webroot directory is dedicated to this project:
+#     sudo mkdir -p /var/www/intimate-sabbatical-acme
+# =============================================================================
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name WEB_DOMAIN_REPLACE_ME CMS_DOMAIN_REPLACE_ME;
+
+    # Certificate issuance / renewal (certbot --webroot -w /var/www/intimate-sabbatical-acme ...)
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/www/intimate-sabbatical-acme;
+        default_type "text/plain";
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}

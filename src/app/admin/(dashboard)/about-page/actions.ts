@@ -1,5 +1,6 @@
 "use server";
 
+import { assertAdmin } from "@/lib/admin-auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getSingleTypeForEdit, updateSingleType, publishDocument, resolveMediaRelation } from "@/lib/strapi-admin";
@@ -7,6 +8,7 @@ import { parseCustomSectionsField, parseListField, str } from "@/lib/admin-form"
 import type { AboutPage } from "@/lib/strapi";
 
 export async function saveAboutPage(mode: "draft" | "publish", formData: FormData) {
+  await assertAdmin();
   let heroPhotoId: number | undefined;
   let hikingPhotoId: number | undefined;
   let dogPhotoId: number | undefined;
@@ -82,5 +84,6 @@ export async function saveAboutPage(mode: "draft" | "publish", formData: FormDat
 }
 
 export async function loadAboutPage() {
+  await assertAdmin();
   return getSingleTypeForEdit<AboutPage>("about-page");
 }

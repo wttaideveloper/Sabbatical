@@ -1,35 +1,86 @@
-const STRAPI_URL = process.env.NEXT_PUBLIC_STRAPI_URL || "http://localhost:1337";
+import "server-only";
 
-export type StrapiMedia = {
-  id: number;
-  url: string;
-  alternativeText?: string | null;
-  width?: number;
-  height?: number;
-};
+import { PHASE_PRODUCTION_BUILD } from "next/constants";
+import { getStrapiInternalUrl } from "./strapi-server";
+import type { StrapiMedia } from "./cms-media";
 
-export function strapiImageUrl(media?: StrapiMedia | null): string | undefined {
-  if (!media?.url) return undefined;
-  return media.url.startsWith("http") ? media.url : `${STRAPI_URL}${media.url}`;
+/**
+ * Server-only data layer for PUBLISHED content. All requests go to Strapi over the
+ * internal URL (STRAPI_INTERNAL_URL). Browser-safe media helpers live in ./cms-media and
+ * are re-exported here so existing server-side imports keep working. Client components
+ * must import them from "@/lib/cms-media" directly.
+ */
+export { strapiImageUrl, toParagraphs } from "./cms-media";
+export type { StrapiMedia } from "./cms-media";
+
+/** Thrown by list/slug fetchers when Strapi can't be reached or returns an error. */
+export class CmsUnavailableError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "CmsUnavailableError";
+  }
 }
 
-/** Splits a plain-text/markdown-ish richtext field on blank lines into paragraphs. */
-export function toParagraphs(text?: string): string[] {
-  if (!text) return [];
-  return text.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
-}
+const REQUEST_TIMEOUT_MS = 10_000;
+/** Strapi's configured maxLimit is 100 (cms/config/api.ts) — never ask for more. */
+const LIST_PAGE_SIZE = 100;
 
-async function strapiFetch<T>(path: string, revalidate = 60): Promise<T | null> {
+type Outcome<T> = { ok: true; data: T | null } | { ok: false; reason: string };
+
+async function cmsRequest<T>(path: string, revalidate: number): Promise<Outcome<T>> {
+  // Nothing is fetched while `next build` runs (the CMS isn't reachable inside a Docker
+  // build), so no CMS-derived content can ever be baked into the build output.
+  if (process.env.NEXT_PHASE === PHASE_PRODUCTION_BUILD) {
+    return { ok: false, reason: "CMS is not queried during the production build" };
+  }
+
+  // Configuration errors are deliberately NOT caught below: a missing
+  // STRAPI_INTERNAL_URL must fail loudly, not degrade into fake content.
+  const base = getStrapiInternalUrl();
+
   try {
-    const res = await fetch(`${STRAPI_URL}/api/${path}`, {
+    const res = await fetch(`${base}/api/${path}`, {
       next: { revalidate },
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
-    if (!res.ok) return null;
+    // A single type that hasn't been created in the CMS yet answers 404 — that's
+    // "no content", not an outage.
+    if (res.status === 404) return { ok: true, data: null };
+    if (!res.ok) return { ok: false, reason: `Strapi responded with ${res.status}` };
     const json = await res.json();
-    return (json?.data ?? null) as T;
-  } catch {
+    return { ok: true, data: (json?.data ?? null) as T };
+  } catch (err) {
+    return { ok: false, reason: err instanceof Error ? err.message : "Network error reaching Strapi" };
+  }
+}
+
+/**
+ * Single documents (pages, site settings, menu). On failure it logs and returns null;
+ * callers render their own real, static copy for these. Failures are logged on the
+ * server (visible in `docker logs`) rather than hidden.
+ */
+async function strapiFetch<T>(path: string, revalidate = 60): Promise<T | null> {
+  const outcome = await cmsRequest<T>(path, revalidate);
+  if (!outcome.ok) {
+    if (process.env.NEXT_PHASE !== PHASE_PRODUCTION_BUILD) {
+      console.error(`[cms] ${path.split("?")[0]} unavailable: ${outcome.reason}`);
+    }
     return null;
   }
+  return outcome.data;
+}
+
+/**
+ * Collections. An outage throws CmsUnavailableError so pages can show an explicit
+ * "unavailable" state — it is never confused with "genuinely empty" and never
+ * replaced by invented data.
+ */
+async function strapiFetchList<T>(path: string, revalidate = 60): Promise<T[]> {
+  const outcome = await cmsRequest<T[]>(path, revalidate);
+  if (!outcome.ok) {
+    throw new CmsUnavailableError(`${path.split("?")[0]}: ${outcome.reason}`);
+  }
+  return outcome.data ?? [];
 }
 
 export type ListItem = {
@@ -245,18 +296,19 @@ export type BlogPost = {
   readTime?: string;
 };
 
+/** Throws CmsUnavailableError if the CMS can't be reached. */
 export async function getBlogPosts() {
-  const posts = await strapiFetch<BlogPost[]>(
-    "blog-posts?populate=*&sort=publishedDate:desc"
+  return strapiFetchList<BlogPost>(
+    `blog-posts?populate=*&sort=publishedDate:desc&pagination[pageSize]=${LIST_PAGE_SIZE}`
   );
-  return posts ?? [];
 }
 
+/** Returns null only when the post genuinely doesn't exist; throws CmsUnavailableError on outage. */
 export async function getBlogPostBySlug(slug: string) {
-  const posts = await strapiFetch<BlogPost[]>(
-    `blog-posts?populate=*&filters[slug][$eq]=${encodeURIComponent(slug)}`
+  const posts = await strapiFetchList<BlogPost>(
+    `blog-posts?populate=*&filters[slug][$eq]=${encodeURIComponent(slug)}&pagination[pageSize]=1`
   );
-  return posts?.[0] ?? null;
+  return posts[0] ?? null;
 }
 
 // ---- Products ----
@@ -271,9 +323,11 @@ export type Product = {
   order?: number;
 };
 
+/** Throws CmsUnavailableError if the CMS can't be reached. */
 export async function getProducts() {
-  const products = await strapiFetch<Product[]>("products?populate=*&sort=order:asc");
-  return products ?? [];
+  return strapiFetchList<Product>(
+    `products?populate=*&sort=order:asc&pagination[pageSize]=${LIST_PAGE_SIZE}`
+  );
 }
 
 // ---- Booking Services ----
@@ -287,11 +341,11 @@ export type BookingService = {
   order?: number;
 };
 
+/** Throws CmsUnavailableError if the CMS can't be reached. */
 export async function getBookingServices() {
-  const services = await strapiFetch<BookingService[]>(
-    "booking-services?populate=*&sort=order:asc"
+  return strapiFetchList<BookingService>(
+    `booking-services?populate=*&sort=order:asc&pagination[pageSize]=${LIST_PAGE_SIZE}`
   );
-  return services ?? [];
 }
 
 // ---- Menu Items ----
@@ -312,7 +366,9 @@ export type MenuItemEntry = {
  * back to FALLBACK_MENU_ITEMS in nav-links.ts only for the former.
  */
 export async function getMenuItems() {
-  return strapiFetch<MenuItemEntry[]>("menu-items?populate=*&sort=order:asc&pagination[pageSize]=100");
+  return strapiFetch<MenuItemEntry[]>(
+    `menu-items?populate=*&sort=order:asc&pagination[pageSize]=${LIST_PAGE_SIZE}`
+  );
 }
 
 // ---- Dynamic (admin-created) Pages ----
@@ -332,14 +388,16 @@ export type DynamicPage = {
   sections?: CustomSectionBlock[];
 };
 
+/** Returns null only when no such page exists; throws CmsUnavailableError on outage. */
 export async function getDynamicPageBySlug(slug: string) {
-  const pages = await strapiFetch<DynamicPage[]>(
-    `dynamic-pages?populate=*&filters[slug][$eq]=${encodeURIComponent(slug)}`
+  const pages = await strapiFetchList<DynamicPage>(
+    `dynamic-pages?populate=*&filters[slug][$eq]=${encodeURIComponent(slug)}&pagination[pageSize]=1`
   );
-  return pages?.[0] ?? null;
+  return pages[0] ?? null;
 }
 
 export async function getDynamicPages() {
-  const pages = await strapiFetch<DynamicPage[]>("dynamic-pages?populate=*&sort=title:asc");
-  return pages ?? [];
+  return strapiFetchList<DynamicPage>(
+    `dynamic-pages?populate=*&sort=title:asc&pagination[pageSize]=${LIST_PAGE_SIZE}`
+  );
 }

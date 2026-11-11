@@ -1,3 +1,4 @@
+import { assertAdmin } from "@/lib/admin-auth";
 import Link from "next/link";
 import { isStrapiTokenConfigured } from "@/lib/strapi-admin";
 
@@ -15,7 +16,8 @@ const SECTIONS = [
   { label: "Booking Services", href: "/admin/booking-services", body: "Options shown on the booking flow." },
 ];
 
-export default function AdminHomePage() {
+export default async function AdminHomePage() {
+  await assertAdmin();
   const configured = isStrapiTokenConfigured();
 
   return (

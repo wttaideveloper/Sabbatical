@@ -1,5 +1,6 @@
 "use server";
 
+import { assertAdmin } from "@/lib/admin-auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
@@ -17,15 +18,18 @@ import type { BlogPost } from "@/lib/strapi";
 const UID = "blog-posts";
 
 export async function loadBlogPosts() {
+  await assertAdmin();
   return listCollectionForEdit<BlogPost>(UID, "publishedDate:desc");
 }
 
 export async function loadBlogPost(documentId: string) {
+  await assertAdmin();
   if (documentId === "new") return { data: null, error: null };
   return getCollectionEntryForEdit<BlogPost>(UID, documentId);
 }
 
 export async function saveBlogPost(documentId: string, mode: "draft" | "publish", formData: FormData) {
+  await assertAdmin();
   let coverImageId: number | undefined;
   try {
     coverImageId = await resolveMediaRelation(formData, "coverImage");
@@ -69,6 +73,7 @@ export async function saveBlogPost(documentId: string, mode: "draft" | "publish"
 }
 
 export async function deleteBlogPost(documentId: string) {
+  await assertAdmin();
   const result = await deleteCollectionEntry(UID, documentId);
   if (result.error) {
     redirect(`/admin/blog?error=${encodeURIComponent(result.error)}`);

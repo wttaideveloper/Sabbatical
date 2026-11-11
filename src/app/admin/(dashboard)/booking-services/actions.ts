@@ -1,5 +1,6 @@
 "use server";
 
+import { assertAdmin } from "@/lib/admin-auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
@@ -16,15 +17,18 @@ import type { BookingService } from "@/lib/strapi";
 const UID = "booking-services";
 
 export async function loadBookingServices() {
+  await assertAdmin();
   return listCollectionForEdit<BookingService>(UID);
 }
 
 export async function loadBookingService(documentId: string) {
+  await assertAdmin();
   if (documentId === "new") return { data: null, error: null };
   return getCollectionEntryForEdit<BookingService>(UID, documentId);
 }
 
 export async function saveBookingService(documentId: string, mode: "draft" | "publish", formData: FormData) {
+  await assertAdmin();
   const orderRaw = str(formData, "order");
 
   const payload: Record<string, unknown> = {
@@ -62,6 +66,7 @@ export async function saveBookingService(documentId: string, mode: "draft" | "pu
 }
 
 export async function deleteBookingService(documentId: string) {
+  await assertAdmin();
   const result = await deleteCollectionEntry(UID, documentId);
   if (result.error) {
     redirect(`/admin/booking-services?error=${encodeURIComponent(result.error)}`);

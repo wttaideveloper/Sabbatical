@@ -4,9 +4,10 @@ import PageHero from "@/components/PageHero";
 import Eyebrow from "@/components/Eyebrow";
 import Reveal from "@/components/Reveal";
 import Button from "@/components/Button";
-import ProductCard from "@/components/ProductCard";
-import { PRODUCTS } from "@/lib/dummy-data";
-import { getProducts, strapiImageUrl } from "@/lib/strapi";
+import ProductCard, { type ProductCardData } from "@/components/ProductCard";
+import StatusNotice, { CmsUnavailableNotice } from "@/components/StatusNotice";
+import { FULLSCRIPT_URL } from "@/lib/public-config";
+import { CmsUnavailableError, getProducts, strapiImageUrl } from "@/lib/strapi";
 
 export const metadata: Metadata = {
   title: "Shop",
@@ -22,12 +23,13 @@ const SWATCH_PALETTE = [
   "linear-gradient(135deg, #8A3F49, #DD6E4A)",
 ];
 
-const FULLSCRIPT_URL = process.env.NEXT_PUBLIC_FULLSCRIPT_URL;
-
-export default async function ShopPage() {
-  const cmsProducts = await getProducts();
-  const products = cmsProducts.length
-    ? cmsProducts.map((p, i) => ({
+/** Only real, published CMS products are ever shown. An outage is reported as such. */
+async function loadProducts(): Promise<{ products: ProductCardData[]; unavailable: boolean }> {
+  try {
+    const cmsProducts = await getProducts();
+    return {
+      unavailable: false,
+      products: cmsProducts.map((p, i) => ({
         id: p.documentId,
         name: p.name,
         category: p.category || "",
@@ -35,8 +37,19 @@ export default async function ShopPage() {
         blurb: p.blurb || "",
         swatch: SWATCH_PALETTE[i % SWATCH_PALETTE.length],
         imageUrl: strapiImageUrl(p.image),
-      }))
-    : PRODUCTS;
+      })),
+    };
+  } catch (err) {
+    if (err instanceof CmsUnavailableError) {
+      console.error(`[cms] ${err.message}`);
+      return { products: [], unavailable: true };
+    }
+    throw err;
+  }
+}
+
+export default async function ShopPage() {
+  const { products, unavailable } = await loadProducts();
 
   return (
     <>
@@ -79,21 +92,29 @@ export default async function ShopPage() {
         </Container>
       </section>
 
-      <section className="py-16 sm:py-24">
-        <Container>
-          <Reveal className="mb-12 max-w-2xl">
-            <Eyebrow tone="coral">Guides &amp; Courses</Eyebrow>
-            <h2 className="text-3xl sm:text-4xl">Resources worth keeping.</h2>
-          </Reveal>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {products.map((product, i) => (
-              <Reveal key={product.id} delay={(i % 3) * 80}>
-                <ProductCard product={product} />
-              </Reveal>
-            ))}
-          </div>
-        </Container>
-      </section>
+      {unavailable ? (
+        <CmsUnavailableNotice />
+      ) : products.length === 0 ? (
+        <StatusNotice eyebrow="Guides & Courses" title="Guides and courses are coming soon.">
+          <p>There&rsquo;s nothing available to purchase just yet. Please check back soon.</p>
+        </StatusNotice>
+      ) : (
+        <section className="py-16 sm:py-24">
+          <Container>
+            <Reveal className="mb-12 max-w-2xl">
+              <Eyebrow tone="coral">Guides &amp; Courses</Eyebrow>
+              <h2 className="text-3xl sm:text-4xl">Resources worth keeping.</h2>
+            </Reveal>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {products.map((product, i) => (
+                <Reveal key={product.id} delay={(i % 3) * 80}>
+                  <ProductCard product={product} />
+                </Reveal>
+              ))}
+            </div>
+          </Container>
+        </section>
+      )}
     </>
   );
 }

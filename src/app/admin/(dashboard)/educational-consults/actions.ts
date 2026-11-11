@@ -1,5 +1,6 @@
 "use server";
 
+import { assertAdmin } from "@/lib/admin-auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
@@ -13,6 +14,7 @@ import { parseCustomSectionsField, parseListField, str } from "@/lib/admin-form"
 import type { EducationalConsultsPage } from "@/lib/strapi";
 
 export async function saveEducationalConsults(mode: "draft" | "publish", formData: FormData) {
+  await assertAdmin();
   let heroVideoUrl: string | undefined;
   let customSections: Record<string, unknown>[];
 
@@ -85,5 +87,6 @@ export async function saveEducationalConsults(mode: "draft" | "publish", formDat
 }
 
 export async function loadEducationalConsults() {
+  await assertAdmin();
   return getSingleTypeForEdit<EducationalConsultsPage>("educational-consults-page");
 }

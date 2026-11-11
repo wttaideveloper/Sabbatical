@@ -11,6 +11,17 @@ const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Database 
     );
   }
 
+  // SQLite: the path is resolved RELATIVE to the app root (see the path.join below), so an
+  // absolute value such as /data/data.db would silently become <app>/data/data.db — i.e. the
+  // database would land outside the persistent volume and be lost with the container.
+  // Refuse it outright. Use e.g. `.tmp/data.db` and mount the persistent volume at `.tmp`.
+  const sqliteFilename = env('DATABASE_FILENAME', '.tmp/data.db');
+  if (client === 'sqlite' && (path.isAbsolute(sqliteFilename) || sqliteFilename.split(/[\\/]/).includes('..'))) {
+    throw new Error(
+      `DATABASE_FILENAME must be a relative path inside the app directory (e.g. ".tmp/data.db"), got "${sqliteFilename}".`
+    );
+  }
+
   const connections: Record<Core.Config.Database.ClientKind, Core.Config.Database['connection']> = {
     mysql: {
       client: 'mysql',
@@ -55,7 +66,7 @@ const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Database 
     sqlite: {
       client: 'sqlite',
       connection: {
-        filename: path.join(__dirname, '..', '..', env('DATABASE_FILENAME', '.tmp/data.db')),
+        filename: path.join(__dirname, '..', '..', sqliteFilename),
       },
       useNullAsDefault: true,
     },

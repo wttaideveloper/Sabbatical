@@ -1,5 +1,6 @@
 "use server";
 
+import { assertAdmin } from "@/lib/admin-auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
@@ -13,6 +14,7 @@ import { parseCustomSectionsField, parseListField, str } from "@/lib/admin-form"
 import type { GroupSessionsPage } from "@/lib/strapi";
 
 export async function saveGroupSessions(mode: "draft" | "publish", formData: FormData) {
+  await assertAdmin();
   let heroVideoUrl: string | undefined;
   let customSections: Record<string, unknown>[];
 
@@ -85,5 +87,6 @@ export async function saveGroupSessions(mode: "draft" | "publish", formData: For
 }
 
 export async function loadGroupSessions() {
+  await assertAdmin();
   return getSingleTypeForEdit<GroupSessionsPage>("group-sessions-page");
 }

@@ -8,6 +8,7 @@ import ServiceCard from "@/components/ServiceCard";
 import VideoEmbed from "@/components/VideoEmbed";
 import CustomSections from "@/components/CustomSections";
 import { getSpeakingRetreatsPage, toParagraphs } from "@/lib/strapi";
+import { CONTACT_EMAIL } from "@/lib/public-config";
 
 export const metadata: Metadata = {
   title: "Speaking & Retreats",
@@ -163,7 +164,7 @@ export default async function SpeakingRetreatsPage() {
         }
         primaryCta={{
           label: "Invite Erika to Speak",
-          href: "mailto:hello@intimatesabbatical.com?subject=Speaking%20Inquiry",
+          href: `mailto:${CONTACT_EMAIL}?subject=Speaking%20Inquiry`,
         }}
       />
 

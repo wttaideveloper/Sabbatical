@@ -1,18 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import Container from "@/components/Container";
 import Eyebrow from "@/components/Eyebrow";
 import Reveal from "@/components/Reveal";
 import CtaBand from "@/components/CtaBand";
 import { getBlogPostBySlug, toParagraphs } from "@/lib/strapi";
-
-const FALLBACK = {
-  category: "Perimenopause",
-  title: "Why Desire Changes Before Anything Else Does",
-  date: "March 12, 2026",
-  readTime: "6 min read",
-  body: "This is a sample post used to preview the blog template—the content below is illustrative, not published editorial.\n\nLong before a missed period or a hot flash ever shows up, many women notice something quieter: sex just doesn't feel the same. Desire that used to arrive on its own seems to have gone somewhere else. Arousal takes longer, or doesn't quite arrive at all.\n\nEstrogen and progesterone get most of the attention, but testosterone—yes, women produce it too—plays an outsized role in desire, sensation, and energy. Its decline is gradual and easy to miss, which is exactly why the first sign is often felt rather than measured.",
-};
+import { isWellFormedSlug } from "@/lib/slugs";
 
 export async function generateMetadata({
   params,
@@ -20,11 +14,19 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const post = await getBlogPostBySlug(slug);
-  return {
-    title: post?.title || FALLBACK.title,
-    description: post?.excerpt,
-  };
+  if (!isWellFormedSlug(slug)) return {};
+
+  try {
+    const post = await getBlogPostBySlug(slug);
+    if (!post) return {};
+    return {
+      title: post.title,
+      description: post.excerpt,
+    };
+  } catch {
+    // CMS outage: the page render below surfaces the failure; metadata just stays generic.
+    return {};
+  }
 }
 
 export default async function BlogPostPage({
@@ -33,13 +35,16 @@ export default async function BlogPostPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const post = await getBlogPostBySlug(slug);
 
-  const category = post?.category || FALLBACK.category;
-  const title = post?.title || FALLBACK.title;
-  const date = post?.publishedDate || FALLBACK.date;
-  const readTime = post?.readTime || FALLBACK.readTime;
-  const paragraphs = toParagraphs(post?.body || FALLBACK.body);
+  // Obviously invalid slugs never reach the CMS.
+  if (!isWellFormedSlug(slug)) notFound();
+
+  // Throws CmsUnavailableError on an outage (-> error boundary), returns null only
+  // when the post genuinely doesn't exist (-> real 404, never a sample post).
+  const post = await getBlogPostBySlug(slug);
+  if (!post) notFound();
+
+  const paragraphs = toParagraphs(post.body);
 
   return (
     <>
@@ -52,12 +57,12 @@ export default async function BlogPostPage({
             >
               &larr; Back to Blog
             </Link>
-            <Eyebrow tone="coral">{category}</Eyebrow>
-            <h1 className="mb-4 text-4xl sm:text-5xl">{title}</h1>
+            {post.category && <Eyebrow tone="coral">{post.category}</Eyebrow>}
+            <h1 className="mb-4 text-4xl sm:text-5xl">{post.title}</h1>
             <div className="flex items-center gap-3 text-xs text-muted">
-              <span>{date}</span>
-              <span>&middot;</span>
-              <span>{readTime}</span>
+              {post.publishedDate && <span>{post.publishedDate}</span>}
+              {post.publishedDate && post.readTime && <span>&middot;</span>}
+              {post.readTime && <span>{post.readTime}</span>}
             </div>
           </Reveal>
         </Container>

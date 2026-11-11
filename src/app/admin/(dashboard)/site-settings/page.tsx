@@ -1,3 +1,4 @@
+import { assertAdmin } from "@/lib/admin-auth";
 import { TextField, SectionCard, FieldRow } from "@/components/admin/Fields";
 import MediaField from "@/components/admin/MediaField";
 import ColorField from "@/components/admin/ColorField";
@@ -15,6 +16,7 @@ export default async function SiteSettingsPage({
 }: {
   searchParams: Promise<{ status?: string; error?: string }>;
 }) {
+  await assertAdmin();
   const { status, error } = await searchParams;
   const { data } = await loadSiteSettings();
   const draftAction = saveSiteSettings.bind(null, "draft");

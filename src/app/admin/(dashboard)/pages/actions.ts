@@ -1,5 +1,6 @@
 "use server";
 
+import { assertAdmin } from "@/lib/admin-auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
@@ -12,48 +13,30 @@ import {
   resolveMediaRelation,
 } from "@/lib/strapi-admin";
 import { parseCustomSectionsField, str } from "@/lib/admin-form";
+import { RESERVED_SLUGS, isWellFormedSlug } from "@/lib/slugs";
 import type { DynamicPage } from "@/lib/strapi";
 
 const UID = "dynamic-pages";
 
-/** Every existing static route, plus a few conventional reservations — a new
- *  page can't take one of these URLs since a matching static folder always
- *  wins the route regardless (this just turns silent shadowing into a clear
- *  error at save time instead). */
-const RESERVED_SLUGS = new Set([
-  "",
-  "admin",
-  "api",
-  "home",
-  "about",
-  "blog",
-  "booking",
-  "contact",
-  "educational-consults",
-  "faq",
-  "group-sessions",
-  "resources",
-  "shop",
-  "speaking-retreats",
-  "videos",
-]);
-
 export async function loadPages() {
+  await assertAdmin();
   return listCollectionForEdit<DynamicPage>(UID, "title:asc");
 }
 
 export async function loadPage(documentId: string) {
+  await assertAdmin();
   if (documentId === "new") return { data: null, error: null };
   return getCollectionEntryForEdit<DynamicPage>(UID, documentId);
 }
 
 export async function savePage(documentId: string, mode: "draft" | "publish", formData: FormData) {
+  await assertAdmin();
   const slug = (str(formData, "slug") || "").toLowerCase();
 
   if (!slug) {
     redirect(`/admin/pages/${documentId}?error=${encodeURIComponent("A URL is required.")}`);
   }
-  if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug)) {
+  if (!isWellFormedSlug(slug)) {
     redirect(
       `/admin/pages/${documentId}?error=${encodeURIComponent(
         "URL can only contain lowercase letters, numbers, and hyphens (e.g. my-page-name)."
@@ -138,6 +121,7 @@ export async function savePage(documentId: string, mode: "draft" | "publish", fo
 }
 
 export async function deletePage(documentId: string) {
+  await assertAdmin();
   // Fetch the slug before deleting — once the entry is gone there's no way to
   // know which ISR-cached path needs invalidating, and without this the
   // deleted page keeps serving its last cached render for up to 60s.

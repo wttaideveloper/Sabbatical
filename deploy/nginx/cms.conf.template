@@ -1,0 +1,124 @@
+# =============================================================================
+# Intimate Sabbatical — CMS (Strapi) HTTPS virtual host  — TEMPLATE
+#
+# Install as a NEW file, e.g. /etc/nginx/sites-available/intimate-sabbatical-cms.conf, then symlink
+# it into sites-enabled. Do NOT edit or replace any existing site file.
+#
+# Before use:
+#   1. Replace CMS_DOMAIN_REPLACE_ME (it also appears in the certificate paths).
+#   2. Set the upstream port to the value of CMS_HOST_PORT in .env (candidate: 4301). Verify on the
+#      VPS that the port is free first (DEPLOYMENT.md -> "Check ports").
+#   3. Install ratelimit.conf.template and http-redirect.conf.template first, and issue the
+#      certificate (DEPLOYMENT.md -> "DNS and SSL").
+#   4. `sudo nginx -t` and only then `sudo systemctl reload nginx`. Never restart nginx.
+#
+# HTTP/2 is deliberately NOT enabled here (see the note in web.conf.template): on nginx 1.24 the
+# flag belongs to the shared listen socket and would change every other site on port 443.
+#
+# What is exposed publicly on this host, and why:
+#   /uploads/   public   — browsers load images and videos from here
+#   /admin      public   — the Strapi admin panel for editors (has its own login + rate limit).
+#                          Optionally restrict it to known IPs (see the commented `allow` lines).
+#   /api/       BLOCKED  — the website talks to Strapi over the private Docker network
+#                          (http://cms:1337), so the REST API needs no public exposure. This also
+#                          closes /api/auth/* (login/registration) to the internet.
+# =============================================================================
+
+upstream intimate_sabbatical_cms {
+    server 127.0.0.1:4301;   # = CMS_HOST_PORT
+    keepalive 16;
+}
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    server_name CMS_DOMAIN_REPLACE_ME;
+
+    ssl_certificate     /etc/letsencrypt/live/CMS_DOMAIN_REPLACE_ME/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/CMS_DOMAIN_REPLACE_ME/privkey.pem;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_session_timeout 1d;
+    ssl_session_cache   shared:intimate_sabbatical_cms_ssl:10m;
+    ssl_session_tickets off;
+
+    # Media uploads from the Strapi admin. Keep equal to the 20 MB limit in Strapi's config.
+    client_max_body_size 20m;
+
+    # HSTS from the TLS terminator (Strapi also sends one; hide it so there is exactly one).
+    # No includeSubDomains/preload: this server hosts other projects.
+    proxy_hide_header Strict-Transport-Security;
+    add_header Strict-Transport-Security "max-age=15552000" always;
+
+    # Never serve dotfiles, except ACME's /.well-known/.
+    location ~ /\.(?!well-known) {
+        deny all;
+    }
+
+    # --- The REST API is internal-only. nginx normalises the URI (decodes %xx, merges slashes)
+    #     before matching, and `~*` makes this case-insensitive: /API/..., //api/..., /%61pi/... ---
+    location ~* ^/api(?:/|$) {
+        return 404;
+    }
+
+    # --- Public media: images and videos referenced by the website ---
+    location /uploads/ {
+        proxy_pass http://intimate_sabbatical_cms;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+
+        # The website (a different origin) embeds these files. Replace any restrictive
+        # Cross-Origin-Resource-Policy the upstream sends with "cross-origin".
+        proxy_hide_header Cross-Origin-Resource-Policy;
+        proxy_hide_header Cache-Control;
+        # add_header in a location REPLACES the server-level ones, so repeat what we need here.
+        add_header Cross-Origin-Resource-Policy "cross-origin" always;
+        add_header Cache-Control "public, max-age=2592000" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Strict-Transport-Security "max-age=15552000" always;
+    }
+
+    # --- Strapi admin login endpoint: rate limited (Strapi also has its own limiter) ---
+    location = /admin/login {
+        limit_req zone=intimate_sabbatical_cms_login burst=5 nodelay;
+        limit_req_status 429;
+
+        # Optional: restrict the admin panel to known editor IPs (uncomment and adapt).
+        # allow 203.0.113.10;
+        # deny  all;
+
+        proxy_pass http://intimate_sabbatical_cms;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+    }
+
+    # --- Everything else: the Strapi admin panel and its internal admin API ---
+    location / {
+        # Optional: restrict the admin panel to known editor IPs (uncomment and adapt).
+        # allow 203.0.113.10;
+        # deny  all;
+
+        proxy_pass http://intimate_sabbatical_cms;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Host $host;
+        # Strapi needs to know the original request was HTTPS (secure admin cookies).
+        proxy_set_header X-Forwarded-Proto $scheme;
+        # OVERWRITE (never append) the client-IP headers.
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+
+        proxy_read_timeout 120s;
+        proxy_send_timeout 120s;
+    }
+}

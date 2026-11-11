@@ -1,0 +1,145 @@
+# Intimate Sabbatical — production Docker Compose (web + cms, SQLite).
+#
+# ISOLATION: this stack is a self-contained Compose project named "intimate-sabbatical".
+# It creates only its own containers and its own bridge network. It uses no external or
+# global networks or volumes, and persistent data lives in bind-mounted directories under
+# APP_DATA_DIR. Always scope commands to the project:
+#     docker compose -p intimate-sabbatical ...
+# On the server never build or pull — images are built elsewhere and loaded with `docker load`:
+#     docker compose -p intimate-sabbatical up -d --no-build --pull never <service>
+#
+# PORTS: web and cms are published on 127.0.0.1 ONLY (reached by the host's nginx).
+# 4300 / 4301 are CANDIDATES — before first deploy check on the VPS that both are free
+# (see DEPLOYMENT.md, "Check ports"), then set WEB_HOST_PORT / CMS_HOST_PORT in .env.
+# Nothing else is published; SQLite is a file, so there is no database port at all.
+#
+# SECRETS: none are in this file. The web container receives its runtime secrets through the
+# `environment:` interpolation below (values come from .env); the cms container reads
+# cms/.env (CMS_ENV_FILE). NEXT_PUBLIC_* values are PUBLIC build arguments, only used by
+# `docker compose build`.
+#
+# Variables used here have defaults on purpose: Compose interpolates the whole file for every
+# command, so e.g. starting only `cms` must not fail because web's token isn't set yet.
+
+name: intimate-sabbatical
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  # ------------------------------------------------------------------------------------
+  # Strapi CMS — start this FIRST (create the admin + API token before exposing anything)
+  # ------------------------------------------------------------------------------------
+  cms:
+    image: intimate-sabbatical-cms:${IMAGE_TAG:-local}
+    build:
+      context: ./cms
+      dockerfile: Dockerfile
+    init: true
+    restart: unless-stopped
+    env_file:
+      - ${CMS_ENV_FILE:-./cms/.env}
+    environment:
+      # Forced here so they cannot be overridden by a mistake in cms/.env.
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: "1337"
+      STRAPI_SEED: "false"
+      DATABASE_CLIENT: sqlite
+      DATABASE_FILENAME: .tmp/data.db
+      STRAPI_TELEMETRY_DISABLED: "true"
+    ports:
+      - "127.0.0.1:${CMS_HOST_PORT:-4301}:1337"
+    volumes:
+      # SQLite database directory  (container path /opt/app/.tmp  ->  .tmp/data.db)
+      - ${APP_DATA_DIR:-/srv/appdata/intimate-sabbatical}/database:/opt/app/.tmp
+      # Uploaded media
+      - ${APP_DATA_DIR:-/srv/appdata/intimate-sabbatical}/cms-uploads:/opt/app/public/uploads
+      # Backup staging area used by deploy/backup.sh
+      - ${APP_DATA_DIR:-/srv/appdata/intimate-sabbatical}/backups:/backups
+    networks:
+      - app
+    healthcheck:
+      # Strapi's built-in health endpoint answers 204 No Content.
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:1337/_health').then(r=>process.exit(r.status===204?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
+    mem_limit: ${CMS_MEM_LIMIT:-1g}
+    cpus: ${CMS_CPUS:-1.0}
+    pids_limit: 512
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    stop_grace_period: 30s
+    logging: *default-logging
+
+  # ------------------------------------------------------------------------------------
+  # Next.js frontend + custom /admin panel
+  # ------------------------------------------------------------------------------------
+  web:
+    image: intimate-sabbatical-web:${IMAGE_TAG:-local}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # PUBLIC build-time values (baked into the bundle; changing them needs a rebuild).
+        NEXT_PUBLIC_CMS_PUBLIC_URL: ${NEXT_PUBLIC_CMS_PUBLIC_URL:-}
+        NEXT_PUBLIC_WEB_URL: ${NEXT_PUBLIC_WEB_URL:-}
+        NEXT_PUBLIC_CONTACT_EMAIL: ${NEXT_PUBLIC_CONTACT_EMAIL:-}
+        NEXT_PUBLIC_FULLSCRIPT_URL: ${NEXT_PUBLIC_FULLSCRIPT_URL:-}
+    init: true
+    restart: unless-stopped
+    depends_on:
+      cms:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: 0.0.0.0
+      NEXT_TELEMETRY_DISABLED: "1"
+      # Server-to-server address of Strapi on the private Docker network.
+      STRAPI_INTERNAL_URL: http://cms:1337
+      # Runtime secrets — provided by .env, never baked into the image.
+      STRAPI_API_TOKEN: ${STRAPI_API_TOKEN:-}
+      ADMIN_PANEL_PASSWORD: ${ADMIN_PANEL_PASSWORD:-}
+      ADMIN_SESSION_SECRET: ${ADMIN_SESSION_SECRET:-}
+    ports:
+      - "127.0.0.1:${WEB_HOST_PORT:-4300}:3000"
+    networks:
+      - app
+    healthcheck:
+      # Lightweight liveness probe; does not depend on Strapi.
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    mem_limit: ${WEB_MEM_LIMIT:-512m}
+    cpus: ${WEB_CPUS:-1.0}
+    pids_limit: 256
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    stop_grace_period: 20s
+    logging: *default-logging
+
+networks:
+  app:
+    # Dedicated bridge network for this project only.
+    name: intimate-sabbatical-net
+    driver: bridge

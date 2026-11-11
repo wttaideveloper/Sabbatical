@@ -9,7 +9,7 @@ export type MenuItem = {
 /**
  * Used when Strapi is unreachable (getMenuItems() returns null) — same shape as
  * MenuItemEntry from lib/strapi so SiteHeader never needs to branch on where the
- * data came from.
+ * data came from. These are real site routes (navigation only), not invented content.
  */
 export const FALLBACK_MENU_ITEMS: MenuItem[] = [
   { label: "Home", href: "/", group: "primary", order: 0 },
@@ -25,4 +25,5 @@ export const FALLBACK_MENU_ITEMS: MenuItem[] = [
   { label: "Contact", href: "/contact", group: "secondary", order: 1 },
 ];
 
-export const CONTACT_EMAIL = "hello@intimatesabbatical.com";
+// Configured through NEXT_PUBLIC_CONTACT_EMAIL (see lib/public-config.ts).
+export { CONTACT_EMAIL } from "./public-config";

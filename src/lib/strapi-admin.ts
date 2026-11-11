@@ -1,15 +1,23 @@
 import "server-only";
 
-const STRAPI_URL = process.env.NEXT_PUBLIC_STRAPI_URL || "http://localhost:1337";
+import { getStrapiInternalUrl } from "./strapi-server";
+import { toRelativeMediaPath } from "./cms-media";
+import { parseVideoUrl, VIDEO_URL_HELP } from "./safe-url";
 
 export type AdminResult<T> = { data: T | null; error: string | null };
+
+/** Matches the 20 MB limits configured in next.config.ts, nginx and Strapi. */
+export const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
+/** Strapi's configured maxLimit (cms/config/api.ts) — page size must never exceed it. */
+const MAX_PAGE_SIZE = 100;
+const MAX_PAGES = 50;
 
 export function isStrapiTokenConfigured(): boolean {
   return Boolean(process.env.STRAPI_API_TOKEN);
 }
 
 export const NOT_CONFIGURED_ERROR =
-  "STRAPI_API_TOKEN is not set. Create an API token in the Strapi admin (Settings → API Tokens → Create new API Token, Full access, Unlimited duration) and add it to .env.local, then restart the dev server.";
+  "STRAPI_API_TOKEN is not set. Create an API token in the Strapi admin (Settings → API Tokens → Create new API Token) and add it to the frontend environment (.env.local in development, the server's .env file in production), then restart the app.";
 
 /**
  * Published reads work without a token, since Strapi's Public role allows
@@ -31,7 +39,7 @@ async function strapiAdminFetch<T>(
 
   try {
     const isFormData = init?.body instanceof FormData;
-    const res = await fetch(`${STRAPI_URL}/api/${path}`, {
+    const res = await fetch(`${getStrapiInternalUrl()}/api/${path}`, {
       ...init,
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -39,6 +47,7 @@ async function strapiAdminFetch<T>(
         ...init?.headers,
       },
       cache: "no-store",
+      signal: AbortSignal.timeout(isFormData ? 120_000 : 20_000),
     });
 
     const json = await res.json().catch(() => null);
@@ -79,13 +88,33 @@ export function updateSingleType<T>(uid: string, data: Record<string, unknown>, 
   return strapiAdminFetch<T>(`${uid}?${statusQS(opts)}`, { method: "PUT", body: JSON.stringify({ data }) }, true);
 }
 
-export function listCollection<T>(uid: string, sort = "order:asc", opts: StatusOpt = {}) {
+/**
+ * Fetches every entry of a collection, paging in chunks of MAX_PAGE_SIZE. Strapi clamps
+ * any larger pageSize to its configured maxLimit (100), which used to silently truncate
+ * this list; paging keeps the full set while respecting that limit.
+ */
+export async function listCollection<T>(
+  uid: string,
+  sort = "order:asc",
+  opts: StatusOpt = {}
+): Promise<AdminResult<T[]>> {
   const status = opts.status ?? "draft";
-  return strapiAdminFetch<T[]>(
-    `${uid}?populate=*&sort=${encodeURIComponent(sort)}&pagination[pageSize]=200&${statusQS(opts)}`,
-    undefined,
-    status === "draft"
-  );
+  const all: T[] = [];
+
+  for (let page = 1; page <= MAX_PAGES; page++) {
+    const result = await strapiAdminFetch<T[]>(
+      `${uid}?populate=*&sort=${encodeURIComponent(sort)}&pagination[page]=${page}&pagination[pageSize]=${MAX_PAGE_SIZE}&${statusQS(opts)}`,
+      undefined,
+      status === "draft"
+    );
+    if (result.error) return { data: null, error: result.error };
+
+    const batch = result.data ?? [];
+    all.push(...batch);
+    if (batch.length < MAX_PAGE_SIZE) break;
+  }
+
+  return { data: all, error: null };
 }
 
 export function getCollectionEntry<T>(uid: string, documentId: string, opts: StatusOpt = {}) {
@@ -205,6 +234,14 @@ export async function getPublishStatus(uid: string, documentId?: string): Promis
 }
 
 export async function uploadMedia(file: File): Promise<AdminResult<{ id: number; url: string }>> {
+  if (file.size > MAX_UPLOAD_BYTES) {
+    return { data: null, error: `That file is too large. The limit is ${MAX_UPLOAD_BYTES / (1024 * 1024)} MB.` };
+  }
+  // Strapi enforces its own allow-list as well; this just gives a clear message early.
+  if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) {
+    return { data: null, error: "Only image and video files can be uploaded here." };
+  }
+
   const form = new FormData();
   form.append("files", file);
   const result = await strapiAdminFetch<{ id: number; url: string }[]>(
@@ -218,33 +255,14 @@ export async function uploadMedia(file: File): Promise<AdminResult<{ id: number;
   return { data: result.data[0] ?? null, error: null };
 }
 
-/** Fetches a link the admin pasted in and re-hosts it in Strapi's media library. */
-export async function uploadMediaFromUrl(url: string): Promise<AdminResult<{ id: number; url: string }>> {
-  let res: Response;
-  try {
-    res = await fetch(url);
-  } catch {
-    return { data: null, error: "Couldn't reach that link. Check the URL and try again." };
-  }
-  if (!res.ok) {
-    return { data: null, error: `That link returned a ${res.status} error. Check the URL and try again.` };
-  }
-
-  const contentType = res.headers.get("content-type") || "application/octet-stream";
-  const blob = await res.blob();
-  const nameFromUrl = decodeURIComponent(url.split("/").pop()?.split("?")[0] || "");
-  const file = new File([blob], nameFromUrl || "upload", { type: contentType });
-  return uploadMedia(file);
-}
-
-function absoluteMediaUrl(url: string): string {
-  return url.startsWith("http") ? url : `${STRAPI_URL}${url}`;
-}
-
 /**
- * For Strapi media-relation fields (e.g. `image`, `heroPhoto`, `logo`). An uploaded
- * file and a pasted link both resolve to a Strapi media asset id — a link is fetched
- * once and re-hosted so the relation field always points at a real asset.
+ * For Strapi media-relation fields (e.g. `image`, `heroPhoto`, `logo`). Only a file
+ * uploaded through the form is accepted.
+ *
+ * Fetching an admin-supplied URL server-side (the old "paste a link" feature) was
+ * removed on purpose: it let the admin panel make the server request arbitrary
+ * addresses, including internal Docker services and other projects on the VPS (SSRF).
+ * Nothing in this app fetches a URL the user typed.
  */
 export async function resolveMediaRelation(formData: FormData, field: string): Promise<number | undefined> {
   const file = formData.get(field);
@@ -253,33 +271,35 @@ export async function resolveMediaRelation(formData: FormData, field: string): P
     if (uploaded.error) throw new Error(uploaded.error);
     return uploaded.data?.id;
   }
-
-  const link = formData.get(`${field}Link`);
-  if (typeof link === "string" && link.trim()) {
-    const uploaded = await uploadMediaFromUrl(link.trim());
-    if (uploaded.error) throw new Error(uploaded.error);
-    return uploaded.data?.id;
-  }
-
   return undefined;
 }
 
 /**
- * For plain-string URL fields (e.g. a hero video link). An uploaded file is hosted
- * in Strapi and its own URL is stored; a pasted link (YouTube, Vimeo, a direct file —
- * whatever the admin typed) is stored exactly as typed, never fetched.
+ * For plain-string video URL fields (e.g. a hero video).
+ *   - An uploaded file is hosted in Strapi and stored as its RELATIVE path (`/uploads/x.mp4`),
+ *     so the database never contains an internal Docker hostname or a hard-coded domain.
+ *   - A typed link is never fetched. It is accepted only if it is a YouTube/Vimeo https://
+ *     link or already points at this CMS’s own uploads (legacy localhost URLs are
+ *     normalised to relative paths). Anything else is rejected with a clear message.
  */
 export async function resolveMediaUrl(formData: FormData, field: string): Promise<string | undefined> {
   const file = formData.get(field);
   if (file instanceof File && file.size > 0) {
     const uploaded = await uploadMedia(file);
     if (uploaded.error) throw new Error(uploaded.error);
-    return uploaded.data ? absoluteMediaUrl(uploaded.data.url) : undefined;
+    if (!uploaded.data) return undefined;
+    return toRelativeMediaPath(uploaded.data.url) ?? uploaded.data.url;
   }
 
   const link = formData.get(`${field}Link`);
   if (typeof link === "string" && link.trim()) {
-    return link.trim();
+    const value = link.trim();
+    const relative = toRelativeMediaPath(value);
+    if (relative) return relative;
+    if (!parseVideoUrl(value)) {
+      throw new Error(`That video link isn’t supported. ${VIDEO_URL_HELP}`);
+    }
+    return value;
   }
 
   return undefined;

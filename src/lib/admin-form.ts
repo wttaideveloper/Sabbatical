@@ -1,3 +1,6 @@
+import { toRelativeMediaPath } from "./cms-media";
+import { LINK_HELP, VIDEO_URL_HELP, parseVideoUrl, safeHref } from "./safe-url";
+
 export type ParsedListItem = {
   number?: string;
   title?: string;
@@ -90,7 +93,7 @@ export function parseCustomSectionsField(formData: FormData, name: string): Pars
     rows.set(index, row);
   }
 
-  return Array.from(rows.entries())
+  const sections = Array.from(rows.entries())
     .sort(([a], [b]) => a - b)
     .map(([index, row]) => ({
       index,
@@ -107,6 +110,24 @@ export function parseCustomSectionsField(formData: FormData, name: string): Pars
       videoUrl: row.videoUrl?.trim() || undefined,
     }))
     .filter((row) => row.heading || row.body);
+
+  // Reject unsafe URLs at save time (they are also re-checked at render time).
+  // Callers wrap this in try/catch and show the message to the admin.
+  for (const section of sections) {
+    if (section.ctaHref && !safeHref(section.ctaHref)) {
+      throw new Error(`The button link "${section.ctaHref}" isn’t allowed. ${LINK_HELP}`);
+    }
+    if (section.videoUrl) {
+      const relative = toRelativeMediaPath(section.videoUrl);
+      if (relative) {
+        section.videoUrl = relative;
+      } else if (!parseVideoUrl(section.videoUrl)) {
+        throw new Error(`The video link "${section.videoUrl}" isn’t supported. ${VIDEO_URL_HELP}`);
+      }
+    }
+  }
+
+  return sections;
 }
 
 export type ParsedMenuItem = {
@@ -142,12 +163,18 @@ export function parseMenuItemsField(formData: FormData, name: string): ParsedMen
     .sort(([a], [b]) => a - b)
     .map(([, row]) => row)
     .filter((row) => row.label?.trim() && row.href?.trim())
-    .map((row) => ({
-      documentId: row.documentId?.trim() || undefined,
-      label: row.label.trim(),
-      href: row.href.trim(),
-      openInNewTab: row.openInNewTab === "true" || row.openInNewTab === "on",
-    }));
+    .map((row) => {
+      const href = row.href.trim();
+      if (!safeHref(href)) {
+        throw new Error(`The menu link "${href}" for "${row.label.trim()}" isn’t allowed. ${LINK_HELP}`);
+      }
+      return {
+        documentId: row.documentId?.trim() || undefined,
+        label: row.label.trim(),
+        href,
+        openInNewTab: row.openInNewTab === "true" || row.openInNewTab === "on",
+      };
+    });
 }
 
 /** Parses a comma-joined hidden input of documentIds the admin removed this save. */

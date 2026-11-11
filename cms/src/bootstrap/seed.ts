@@ -44,7 +44,26 @@ async function uploadAsset(strapi: Core.Strapi, filename: string): Promise<numbe
   return file?.id;
 }
 
+/**
+ * Seeding publishes sample content (placeholder blog posts, invented product and service
+ * prices, "#" social links). It must NEVER run against a real site, so it requires BOTH:
+ *   - NODE_ENV is not "production", and
+ *   - STRAPI_SEED=true (explicit opt-in; the default is off).
+ */
+export function isSeedEnabled(): boolean {
+  return (
+    process.env.NODE_ENV !== 'production' &&
+    (process.env.STRAPI_SEED ?? '').trim().toLowerCase() === 'true'
+  );
+}
+
 export default async function seed({ strapi }: { strapi: Core.Strapi }) {
+  // Defence in depth: callers already check this, but the function refuses on its own too.
+  if (!isSeedEnabled()) {
+    strapi.log.warn('[seed] Refusing to seed: requires NODE_ENV!=production and STRAPI_SEED=true.');
+    return;
+  }
+
   strapi.log.info('[seed] Checking seed state...');
 
   const logoId = await uploadAsset(strapi, 'logo-transparent.png');

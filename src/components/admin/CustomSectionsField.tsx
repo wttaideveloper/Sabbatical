@@ -4,7 +4,7 @@ import { useState } from "react";
 import ReorderableList from "./ReorderableList";
 import MediaField from "./MediaField";
 import { FONT_OPTIONS } from "@/lib/font-options";
-import { strapiImageUrl, type StrapiMedia } from "@/lib/strapi";
+import { strapiImageUrl, type StrapiMedia } from "@/lib/cms-media";
 
 export type CustomSectionValue = {
   key: string;
@@ -145,7 +145,7 @@ export default function CustomSectionsField({
 
                   {blockType === "video" && (
                     <input
-                      placeholder="https://youtube.com/watch?v=..."
+                      placeholder="YouTube or Vimeo link, e.g. https://youtube.com/watch?v=..."
                       defaultValue={item.videoUrl}
                       onChange={(e) => update(item.key, "videoUrl", e.target.value)}
                       className={inputClass}

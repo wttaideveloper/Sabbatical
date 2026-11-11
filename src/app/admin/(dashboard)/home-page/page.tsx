@@ -1,3 +1,4 @@
+import { assertAdmin } from "@/lib/admin-auth";
 import { TextField, RichTextField, SectionCard, FieldRow } from "@/components/admin/Fields";
 import MediaField from "@/components/admin/MediaField";
 import ColorField from "@/components/admin/ColorField";
@@ -15,6 +16,7 @@ export default async function HomePageAdmin({
 }: {
   searchParams: Promise<{ status?: string; error?: string }>;
 }) {
+  await assertAdmin();
   const { status, error } = await searchParams;
   const { data } = await loadHomePage();
   const draftAction = saveHomePage.bind(null, "draft");

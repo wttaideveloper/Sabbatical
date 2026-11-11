@@ -1,43 +1,33 @@
-const VIDEO_FILE_PATTERN = /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i;
+import { parseVideoUrl } from "@/lib/safe-url";
 
-function toEmbedUrl(url: string): string {
-  try {
-    const u = new URL(url);
-    if (u.hostname.includes("youtu.be")) {
-      return `https://www.youtube.com/embed/${u.pathname.slice(1)}`;
-    }
-    if (u.hostname.includes("youtube.com")) {
-      const id = u.searchParams.get("v");
-      if (id) return `https://www.youtube.com/embed/${id}`;
-      if (u.pathname.startsWith("/embed/")) return url;
-    }
-    if (u.hostname.includes("vimeo.com")) {
-      const id = u.pathname.split("/").filter(Boolean).pop();
-      return `https://player.vimeo.com/video/${id}`;
-    }
-    return url;
-  } catch {
-    return url;
-  }
-}
-
+/**
+ * Renders a video from an admin-supplied URL, but only if it is one of:
+ *   - a YouTube or Vimeo https:// link (re-built from a validated video ID), or
+ *   - a video file uploaded to this site's own CMS.
+ * Anything else renders nothing — the stored value is never echoed into an iframe/src
+ * unchecked, so a javascript:/data: URL or an arbitrary third-party page can't be embedded.
+ */
 export default function VideoEmbed({ url, title = "Video" }: { url: string; title?: string }) {
-  const isFile = VIDEO_FILE_PATTERN.test(url);
+  const video = parseVideoUrl(url);
+  if (!video) return null;
 
   return (
     <div className="overflow-hidden rounded-2xl border border-line bg-ink">
       <div className="relative aspect-video w-full">
-        {isFile ? (
+        {video.kind === "file" ? (
           <video
-            src={url}
+            src={video.src}
             controls
             playsInline
+            preload="metadata"
             className="absolute inset-0 h-full w-full object-contain"
           />
         ) : (
           <iframe
-            src={toEmbedUrl(url)}
+            src={video.src}
             title={title}
+            loading="lazy"
+            referrerPolicy="strict-origin-when-cross-origin"
             className="absolute inset-0 h-full w-full"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen

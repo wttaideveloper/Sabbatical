@@ -1,5 +1,6 @@
 "use server";
 
+import { assertAdmin } from "@/lib/admin-auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getSingleTypeForEdit, updateSingleType, publishDocument, resolveMediaRelation } from "@/lib/strapi-admin";
@@ -7,6 +8,7 @@ import { parseCustomSectionsField, str } from "@/lib/admin-form";
 import type { HomePage } from "@/lib/strapi";
 
 export async function saveHomePage(mode: "draft" | "publish", formData: FormData) {
+  await assertAdmin();
   let heroImageId: number | undefined;
   let aboutTeaserImageId: number | undefined;
   let customSections: Record<string, unknown>[];
@@ -86,5 +88,6 @@ export async function saveHomePage(mode: "draft" | "publish", formData: FormData
 }
 
 export async function loadHomePage() {
+  await assertAdmin();
   return getSingleTypeForEdit<HomePage>("home-page");
 }

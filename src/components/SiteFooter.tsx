@@ -8,6 +8,7 @@ import { CONTACT_EMAIL } from "@/lib/nav-links";
 import type { SiteSetting } from "@/lib/strapi";
 import { fontFamilyCssVar } from "@/lib/font-options";
 import { fontSizeRem } from "@/lib/font-size-options";
+import { safeHref } from "@/lib/safe-url";
 
 export default function SiteFooter({ siteSetting }: { siteSetting: SiteSetting | null }) {
   const pathname = usePathname();
@@ -21,6 +22,13 @@ export default function SiteFooter({ siteSetting }: { siteSetting: SiteSetting |
         fontSize: fontSizeRem(siteSetting.headerFooterFontSize),
       }
     : undefined;
+
+  // Social links come from Site Settings. Only real, safe https:// links are rendered —
+  // an unset field (or a "#" placeholder) simply hides the link instead of showing a dead one.
+  const socialLinks = [
+    { label: "Instagram", href: safeHref(siteSetting?.instagramUrl) },
+    { label: "YouTube", href: safeHref(siteSetting?.youtubeUrl) },
+  ].filter((link): link is { label: string; href: string } => Boolean(link.href) && link.href !== "#");
 
   return (
     <footer
@@ -98,12 +106,17 @@ export default function SiteFooter({ siteSetting }: { siteSetting: SiteSetting |
           <a href={`mailto:${CONTACT_EMAIL}`} className="text-sm hover:text-coral">
             {CONTACT_EMAIL}
           </a>
-          <a href="#" className="text-sm hover:text-coral">
-            Instagram
-          </a>
-          <a href="#" className="text-sm hover:text-coral">
-            YouTube
-          </a>
+          {socialLinks.map((link) => (
+            <a
+              key={link.label}
+              href={link.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm hover:text-coral"
+            >
+              {link.label}
+            </a>
+          ))}
         </div>
       </Container>
       <div className="relative border-t border-white/10">

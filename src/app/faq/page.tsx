@@ -4,6 +4,7 @@ import PageHero from "@/components/PageHero";
 import Reveal from "@/components/Reveal";
 import Accordion, { AccordionItem } from "@/components/Accordion";
 import CtaBand from "@/components/CtaBand";
+import { CONTACT_EMAIL } from "@/lib/public-config";
 
 export const metadata: Metadata = {
   title: "FAQ",
@@ -76,7 +77,7 @@ export default function FaqPage() {
         body="Send a note with what you're navigating, and we'll help you figure out the right next step."
         primaryCta={{
           label: "Email a Question",
-          href: "mailto:hello@intimatesabbatical.com?subject=Question",
+          href: `mailto:${CONTACT_EMAIL}?subject=Question`,
         }}
       />
     </>

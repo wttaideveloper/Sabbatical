@@ -1,0 +1,30 @@
+# Docker build context for the Strapi CMS image (./cms).
+# The local SQLite database, uploads and every .env file must never enter an image.
+
+# dependencies and build output (rebuilt inside the image)
+node_modules
+dist
+build
+.cache
+.strapi
+.strapi-updater.json
+.strapi-cloud.json
+
+# local state: development database and uploaded media
+.tmp
+public/uploads/*
+!public/uploads/.gitkeep
+
+# environment files
+.env
+.env.*
+
+# tooling / docs / noise
+.git
+.gitignore
+Dockerfile
+.dockerignore
+*.md
+*.log
+.DS_Store
+Thumbs.db

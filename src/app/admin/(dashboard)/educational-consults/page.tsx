@@ -1,3 +1,4 @@
+import { assertAdmin } from "@/lib/admin-auth";
 import { TextField, TextAreaField, RichTextField, SectionCard, FieldRow } from "@/components/admin/Fields";
 import ListItemsField from "@/components/admin/ListItemsField";
 import MediaField from "@/components/admin/MediaField";
@@ -15,6 +16,7 @@ export default async function EducationalConsultsAdmin({
 }: {
   searchParams: Promise<{ status?: string; error?: string }>;
 }) {
+  await assertAdmin();
   const { status, error } = await searchParams;
   const { data } = await loadEducationalConsults();
   const draftAction = saveEducationalConsults.bind(null, "draft");

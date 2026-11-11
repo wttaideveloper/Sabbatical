@@ -5,6 +5,7 @@ import PageHero from "@/components/PageHero";
 import CustomSections from "@/components/CustomSections";
 import { getDynamicPageBySlug, strapiImageUrl } from "@/lib/strapi";
 import { getDynamicPageBySlugPreview } from "@/lib/strapi-preview";
+import { isLookupableSlug } from "@/lib/slugs";
 
 export async function generateMetadata({
   params,
@@ -12,12 +13,20 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const page = await getDynamicPageBySlug(slug);
-  if (!page) return {};
-  return {
-    title: page.title,
-    description: page.seoDescription || page.heroLead,
-  };
+  // Scanner/bot paths such as /wp-login.php or /.env never trigger a CMS request.
+  if (!isLookupableSlug(slug)) return {};
+
+  try {
+    const page = await getDynamicPageBySlug(slug);
+    if (!page) return {};
+    return {
+      title: page.title,
+      description: page.seoDescription || page.heroLead,
+    };
+  } catch {
+    // CMS outage: the page render below surfaces the failure; metadata just stays generic.
+    return {};
+  }
 }
 
 export default async function DynamicPageRoute({
@@ -26,6 +35,9 @@ export default async function DynamicPageRoute({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+
+  if (!isLookupableSlug(slug)) notFound();
+
   const { isEnabled } = await draftMode();
   const page = isEnabled ? await getDynamicPageBySlugPreview(slug) : await getDynamicPageBySlug(slug);
 

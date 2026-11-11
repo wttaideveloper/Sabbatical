@@ -1,0 +1,87 @@
+# =============================================================================
+# Intimate Sabbatical — WEB (Next.js) HTTPS virtual host  — TEMPLATE
+#
+# Install as a NEW file, e.g. /etc/nginx/sites-available/intimate-sabbatical-web.conf, then symlink
+# it into sites-enabled. Do NOT edit or replace any existing site file.
+#
+# Before use:
+#   1. Replace WEB_DOMAIN_REPLACE_ME (it also appears in the certificate paths).
+#   2. Set the upstream port to the value of WEB_HOST_PORT in .env (candidate: 4300). Verify on the
+#      VPS that the port is free first (DEPLOYMENT.md -> "Check ports").
+#   3. Install ratelimit.conf.template and http-redirect.conf.template first, and issue the
+#      certificate (DEPLOYMENT.md -> "DNS and SSL").
+#   4. `sudo nginx -t` and only then `sudo systemctl reload nginx`. Never restart nginx.
+#
+# HTTP/2 is deliberately NOT enabled here. On nginx 1.24 (Ubuntu 24.04) the `http2` flag belongs to
+# the shared listen socket, so setting it in this file would switch HTTP/2 on for every other site
+# that listens on 443. If another site on this server already enables it, this vhost gets HTTP/2
+# automatically; if not, it simply uses HTTP/1.1.
+# =============================================================================
+
+upstream intimate_sabbatical_web {
+    server 127.0.0.1:4300;   # = WEB_HOST_PORT
+    keepalive 16;
+}
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    server_name WEB_DOMAIN_REPLACE_ME;
+
+    ssl_certificate     /etc/letsencrypt/live/WEB_DOMAIN_REPLACE_ME/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/WEB_DOMAIN_REPLACE_ME/privkey.pem;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_session_timeout 1d;
+    ssl_session_cache   shared:intimate_sabbatical_web_ssl:10m;
+    ssl_session_tickets off;
+
+    # Admin uploads (images / short videos) go through Next.js Server Actions.
+    # Keep equal to the 20 MB limits in next.config.ts and Strapi.
+    client_max_body_size 20m;
+
+    # HSTS is set here (the TLS terminator), not by the app. No includeSubDomains/preload on purpose:
+    # this server hosts other projects and must not force HTTPS-only on sibling subdomains.
+    proxy_hide_header Strict-Transport-Security;
+    add_header Strict-Transport-Security "max-age=15552000" always;
+    # The remaining security headers (nosniff, X-Frame-Options, Referrer-Policy, Permissions-Policy,
+    # CSP frame-ancestors) are sent by the Next.js app itself (next.config.ts).
+
+    # Never serve dotfiles (.git, .env, ...), except ACME's /.well-known/.
+    location ~ /\.(?!well-known) {
+        deny all;
+    }
+
+    # --- Custom admin login: rate limited (in addition to the app's own 5-failures/15-min lockout) ---
+    location = /admin/login {
+        limit_req zone=intimate_sabbatical_login burst=5 nodelay;
+        limit_req_status 429;
+
+        proxy_pass http://intimate_sabbatical_web;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        # OVERWRITE (never append) the client-IP headers: the app trusts them for rate limiting.
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+    }
+
+    # --- Everything else (pages, /admin/*, /_next/*, /api/health, Server Actions) ---
+    location / {
+        proxy_pass http://intimate_sabbatical_web;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+
+        # Next.js Server Actions compare the browser's Origin with Host / X-Forwarded-Host.
+        # Forwarding the PUBLIC host here is what makes admin saves work behind a proxy.
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+
+        proxy_read_timeout 120s;
+        proxy_send_timeout 120s;
+    }
+}

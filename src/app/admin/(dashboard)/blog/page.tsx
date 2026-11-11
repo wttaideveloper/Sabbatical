@@ -1,3 +1,4 @@
+import { assertAdmin } from "@/lib/admin-auth";
 import Link from "next/link";
 import StatusBanner from "@/components/admin/StatusBanner";
 import { loadBlogPosts } from "./actions";
@@ -7,6 +8,7 @@ export default async function BlogListAdmin({
 }: {
   searchParams: Promise<{ status?: string; error?: string }>;
 }) {
+  await assertAdmin();
   const { status, error } = await searchParams;
   const { data: posts, error: loadError } = await loadBlogPosts();
 

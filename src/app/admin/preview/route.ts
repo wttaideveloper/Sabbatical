@@ -1,3 +1,4 @@
+import { assertAdmin } from "@/lib/admin-auth";
 import { draftMode } from "next/headers";
 import { redirect } from "next/navigation";
 import { NextRequest } from "next/server";
@@ -10,6 +11,7 @@ function safePath(path: string | null): string {
 }
 
 export async function GET(request: NextRequest) {
+  await assertAdmin();
   const path = safePath(request.nextUrl.searchParams.get("path"));
   const draft = await draftMode();
   draft.enable();

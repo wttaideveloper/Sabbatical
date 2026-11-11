@@ -1,5 +1,6 @@
 "use server";
 
+import { assertAdmin } from "@/lib/admin-auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
@@ -17,15 +18,18 @@ import type { Product } from "@/lib/strapi";
 const UID = "products";
 
 export async function loadProducts() {
+  await assertAdmin();
   return listCollectionForEdit<Product>(UID);
 }
 
 export async function loadProduct(documentId: string) {
+  await assertAdmin();
   if (documentId === "new") return { data: null, error: null };
   return getCollectionEntryForEdit<Product>(UID, documentId);
 }
 
 export async function saveProduct(documentId: string, mode: "draft" | "publish", formData: FormData) {
+  await assertAdmin();
   let imageId: number | undefined;
   try {
     imageId = await resolveMediaRelation(formData, "image");
@@ -69,6 +73,7 @@ export async function saveProduct(documentId: string, mode: "draft" | "publish",
 }
 
 export async function deleteProduct(documentId: string) {
+  await assertAdmin();
   const result = await deleteCollectionEntry(UID, documentId);
   if (result.error) {
     redirect(`/admin/products?error=${encodeURIComponent(result.error)}`);

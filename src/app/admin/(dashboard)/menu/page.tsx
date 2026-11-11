@@ -1,3 +1,4 @@
+import { assertAdmin } from "@/lib/admin-auth";
 import { SectionCard } from "@/components/admin/Fields";
 import MenuEditor from "@/components/admin/MenuEditor";
 import SaveButton from "@/components/admin/SaveButton";
@@ -11,6 +12,7 @@ export default async function MenuAdmin({
 }: {
   searchParams: Promise<{ status?: string; error?: string }>;
 }) {
+  await assertAdmin();
   const { status, error } = await searchParams;
   const { data } = await loadMenuItems();
   const draftAction = saveMenu.bind(null, "draft");

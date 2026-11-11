@@ -1,3 +1,4 @@
+import { assertAdmin } from "@/lib/admin-auth";
 import Link from "next/link";
 import ViewportToggle from "@/components/admin/ViewportToggle";
 
@@ -6,6 +7,7 @@ export default async function PreviewPanelPage({
 }: {
   searchParams: Promise<{ path?: string }>;
 }) {
+  await assertAdmin();
   const { path } = await searchParams;
   const targetPath = path && path.startsWith("/") && !path.startsWith("//") ? path : "/";
 

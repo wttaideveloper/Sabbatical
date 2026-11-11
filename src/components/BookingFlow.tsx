@@ -6,8 +6,7 @@ import Container from "@/components/Container";
 import Eyebrow from "@/components/Eyebrow";
 import Reveal from "@/components/Reveal";
 import Stepper from "@/components/Stepper";
-import { BOOKING_DATES, BOOKING_TIMES } from "@/lib/dummy-data";
-import { CONTACT_EMAIL } from "@/lib/nav-links";
+import { CONTACT_EMAIL } from "@/lib/public-config";
 
 type ServiceOption = {
   id: string;
@@ -17,36 +16,89 @@ type ServiceOption = {
   description?: string;
 };
 
-const STEPS = ["Service", "Date & Time", "Your Details", "Confirm"];
+const STEPS = ["Service", "Preferred Time", "Your Details", "Review & Send"];
 const EASE = [0.22, 1, 0.36, 1] as const;
+
+// Preferences, not availability: nothing here claims a slot is open.
+const TIME_WINDOWS = [
+  { value: "Morning (before 12 pm)", label: "Morning (before 12 pm)" },
+  { value: "Afternoon (12–5 pm)", label: "Afternoon (12–5 pm)" },
+  { value: "Evening (after 5 pm)", label: "Evening (after 5 pm)" },
+  { value: "Flexible — any time", label: "Flexible — any time" },
+] as const;
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MAX_NOTES_LENGTH = 1000;
+
+function toIsoDate(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function parseIsoDate(iso: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!match) return null;
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function formatDate(iso: string): string {
+  const date = parseIsoDate(iso);
+  return date
+    ? date.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })
+    : iso;
+}
+
+function isTodayOrLater(iso: string): boolean {
+  const date = parseIsoDate(iso);
+  if (!date) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return date.getTime() >= today.getTime();
+}
+
+const inputClass =
+  "rounded-xl border border-line px-4 py-3 text-sm outline-none focus:border-burgundy";
 
 export default function BookingFlow({ services }: { services: ServiceOption[] }) {
   const [step, setStep] = useState(0);
   const [serviceId, setServiceId] = useState<string | null>(null);
-  const [dateIso, setDateIso] = useState<string | null>(null);
-  const [time, setTime] = useState<string | null>(null);
+  const [preferredDate, setPreferredDate] = useState("");
+  const [timeWindow, setTimeWindow] = useState("");
+  const [alternatives, setAlternatives] = useState("");
   const [form, setForm] = useState({ name: "", email: "", phone: "", notes: "" });
+  const [emailOpened, setEmailOpened] = useState(false);
 
   const service = services.find((s) => s.id === serviceId);
-  const date = BOOKING_DATES.find((d) => d.iso === dateIso);
 
   const canProceed =
     (step === 0 && !!serviceId) ||
-    (step === 1 && !!dateIso && !!time) ||
-    (step === 2 && !!form.name && !!form.email) ||
+    (step === 1 && isTodayOrLater(preferredDate) && !!timeWindow) ||
+    (step === 2 && !!form.name.trim() && EMAIL_PATTERN.test(form.email.trim())) ||
     step === 3;
 
   const goNext = () => setStep((s) => Math.min(s + 1, STEPS.length - 1));
   const goBack = () => setStep((s) => Math.max(s - 1, 0));
 
-  const summaryLines = [
-    service && `Service: ${service.title} (${service.duration}, ${service.price})`,
-    date && time && `When: ${date.weekday}, ${date.month} ${date.day} at ${time}`,
-    form.name && `Name: ${form.name}`,
-    form.email && `Email: ${form.email}`,
-  ]
-    .filter(Boolean)
-    .join("\n");
+  const serviceLine = service
+    ? [service.title, [service.duration, service.price].filter(Boolean).join(", ")]
+        .filter(Boolean)
+        .join(" — ")
+    : "";
+
+  const lines: string[] = ["BOOKING REQUEST — not a confirmed appointment", ""];
+  if (serviceLine) lines.push(`Service: ${serviceLine}`);
+  if (preferredDate) lines.push(`Preferred date: ${formatDate(preferredDate)}`);
+  if (timeWindow) lines.push(`Preferred time: ${timeWindow}`);
+  if (alternatives.trim()) lines.push(`Other dates/times that could work: ${alternatives.trim()}`);
+  lines.push("");
+  if (form.name.trim()) lines.push(`Name: ${form.name.trim()}`);
+  if (form.email.trim()) lines.push(`Email: ${form.email.trim()}`);
+  if (form.phone.trim()) lines.push(`Phone: ${form.phone.trim()}`);
+  if (form.notes.trim()) lines.push(`Notes: ${form.notes.trim().slice(0, MAX_NOTES_LENGTH)}`);
+  const summaryLines = lines.join("\n");
 
   const mailtoHref = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(
     "Booking Request"
@@ -57,12 +109,12 @@ export default function BookingFlow({ services }: { services: ServiceOption[] })
       <section className="border-b border-line bg-gradient-to-br from-white via-cream to-[#f2e4dd]">
         <Container className="flex min-h-0 items-center py-16 sm:min-h-[320px] sm:py-20">
           <Reveal className="max-w-2xl">
-            <Eyebrow>Book a Consult</Eyebrow>
-            <h1 className="mb-4 text-4xl sm:text-5xl">Schedule your session.</h1>
+            <Eyebrow>Request a Consult</Eyebrow>
+            <h1 className="mb-4 text-4xl sm:text-5xl">Request your session.</h1>
             <p className="text-lg leading-relaxed text-ink/80">
-              A preview of what booking will look like. Real-time scheduling will run through
-              Practice Better once connected&mdash;for now, complete the steps below and we&rsquo;ll
-              follow up by email.
+              Choose a service and tell us when you&rsquo;d like to meet. This sends a{" "}
+              <strong className="font-semibold text-ink">request</strong> by email&mdash;it is not a
+              confirmed appointment. We&rsquo;ll reply to confirm a time that works for you.
             </p>
           </Reveal>
         </Container>
@@ -100,11 +152,13 @@ export default function BookingFlow({ services }: { services: ServiceOption[] })
                         >
                           <div className="flex items-center justify-between gap-4">
                             <h3 className="text-lg">{s.title}</h3>
-                            <span className="text-sm font-medium text-burgundy">{s.price}</span>
+                            {s.price && <span className="text-sm font-medium text-burgundy">{s.price}</span>}
                           </div>
-                          <p className="mt-1 text-sm text-muted">
-                            {s.duration} &middot; {s.description}
-                          </p>
+                          {(s.duration || s.description) && (
+                            <p className="mt-1 text-sm text-muted">
+                              {[s.duration, s.description].filter(Boolean).join(" · ")}
+                            </p>
+                          )}
                         </button>
                       ))}
                     </div>
@@ -113,50 +167,64 @@ export default function BookingFlow({ services }: { services: ServiceOption[] })
 
                 {step === 1 && (
                   <div>
-                    <h2 className="mb-6 text-2xl">Pick a date &amp; time</h2>
-                    <p className="mb-3 text-xs font-semibold uppercase tracking-[0.1em] text-muted">
-                      Date
+                    <h2 className="mb-2 text-2xl">When would you like to meet?</h2>
+                    <p className="mb-6 text-sm leading-relaxed text-muted">
+                      Tell us what works best for you. These are your preferences&mdash;nothing is
+                      reserved until we reply to confirm. Please mention your time zone in the
+                      notes if it may differ from ours.
                     </p>
-                    <div className="mb-8 grid grid-cols-3 gap-3 sm:grid-cols-6">
-                      {BOOKING_DATES.map((d) => (
-                        <button
-                          key={d.iso}
-                          type="button"
-                          onClick={() => setDateIso(d.iso)}
-                          className={`rounded-xl border p-3 text-center transition-colors ${
-                            dateIso === d.iso
-                              ? "border-burgundy bg-burgundy/5"
-                              : "border-line hover:border-burgundy/40"
-                          }`}
-                        >
-                          <span className="block text-[10px] uppercase text-muted">
-                            {d.weekday}
-                          </span>
-                          <span className="block text-lg text-ink">{d.day}</span>
-                          <span className="block text-[10px] uppercase text-muted">
-                            {d.month}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                    <p className="mb-3 text-xs font-semibold uppercase tracking-[0.1em] text-muted">
-                      Time
-                    </p>
-                    <div className="flex flex-wrap gap-3">
-                      {BOOKING_TIMES.map((t) => (
-                        <button
-                          key={t}
-                          type="button"
-                          onClick={() => setTime(t)}
-                          className={`rounded-full border px-5 py-2.5 text-sm transition-colors ${
-                            time === t
-                              ? "border-burgundy bg-burgundy text-white"
-                              : "border-line text-ink hover:border-burgundy/40"
-                          }`}
-                        >
-                          {t}
-                        </button>
-                      ))}
+                    <div className="flex flex-col gap-5">
+                      <label className="flex flex-col gap-2">
+                        <span className="text-xs font-semibold uppercase tracking-[0.1em] text-muted">
+                          Preferred date
+                        </span>
+                        <input
+                          type="date"
+                          min={toIsoDate(new Date())}
+                          value={preferredDate}
+                          onChange={(e) => setPreferredDate(e.target.value)}
+                          className={inputClass}
+                        />
+                        {preferredDate && !isTodayOrLater(preferredDate) && (
+                          <span className="text-xs text-coral">Please choose today or a future date.</span>
+                        )}
+                      </label>
+
+                      <div>
+                        <p className="mb-3 text-xs font-semibold uppercase tracking-[0.1em] text-muted">
+                          Preferred time of day
+                        </p>
+                        <div className="flex flex-wrap gap-3">
+                          {TIME_WINDOWS.map((t) => (
+                            <button
+                              key={t.value}
+                              type="button"
+                              onClick={() => setTimeWindow(t.value)}
+                              className={`rounded-full border px-5 py-2.5 text-sm transition-colors ${
+                                timeWindow === t.value
+                                  ? "border-burgundy bg-burgundy text-white"
+                                  : "border-line text-ink hover:border-burgundy/40"
+                              }`}
+                            >
+                              {t.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <label className="flex flex-col gap-2">
+                        <span className="text-xs font-semibold uppercase tracking-[0.1em] text-muted">
+                          Other dates or times that could work (optional)
+                        </span>
+                        <textarea
+                          value={alternatives}
+                          onChange={(e) => setAlternatives(e.target.value)}
+                          rows={3}
+                          maxLength={300}
+                          placeholder="e.g. Any Tuesday or Thursday in the next two weeks"
+                          className={inputClass}
+                        />
+                      </label>
                     </div>
                   </div>
                 )}
@@ -167,31 +235,36 @@ export default function BookingFlow({ services }: { services: ServiceOption[] })
                     <div className="flex flex-col gap-4">
                       <input
                         type="text"
+                        aria-label="Full name"
                         placeholder="Full name"
                         value={form.name}
                         onChange={(e) => setForm({ ...form, name: e.target.value })}
-                        className="rounded-xl border border-line px-4 py-3 text-sm outline-none focus:border-burgundy"
+                        className={inputClass}
                       />
                       <input
                         type="email"
+                        aria-label="Email address"
                         placeholder="Email address"
                         value={form.email}
                         onChange={(e) => setForm({ ...form, email: e.target.value })}
-                        className="rounded-xl border border-line px-4 py-3 text-sm outline-none focus:border-burgundy"
+                        className={inputClass}
                       />
                       <input
                         type="tel"
+                        aria-label="Phone (optional)"
                         placeholder="Phone (optional)"
                         value={form.phone}
                         onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                        className="rounded-xl border border-line px-4 py-3 text-sm outline-none focus:border-burgundy"
+                        className={inputClass}
                       />
                       <textarea
+                        aria-label="Notes"
                         placeholder="Anything you'd like us to know before your session?"
                         value={form.notes}
                         onChange={(e) => setForm({ ...form, notes: e.target.value })}
                         rows={4}
-                        className="rounded-xl border border-line px-4 py-3 text-sm outline-none focus:border-burgundy"
+                        maxLength={MAX_NOTES_LENGTH}
+                        className={inputClass}
                       />
                     </div>
                   </div>
@@ -199,18 +272,28 @@ export default function BookingFlow({ services }: { services: ServiceOption[] })
 
                 {step === 3 && (
                   <div>
-                    <h2 className="mb-6 text-2xl">Review &amp; confirm</h2>
+                    <h2 className="mb-6 text-2xl">Review your request</h2>
                     <div className="mb-6 flex flex-col gap-3 rounded-xl bg-cream-soft p-5 text-sm text-ink/80">
                       {service && (
                         <p>
-                          <span className="font-medium text-ink">Service:</span> {service.title}{" "}
-                          ({service.duration}, {service.price})
+                          <span className="font-medium text-ink">Service:</span> {serviceLine}
                         </p>
                       )}
-                      {date && time && (
+                      {preferredDate && (
                         <p>
-                          <span className="font-medium text-ink">When:</span> {date.weekday},{" "}
-                          {date.month} {date.day} at {time}
+                          <span className="font-medium text-ink">Preferred date:</span>{" "}
+                          {formatDate(preferredDate)}
+                        </p>
+                      )}
+                      {timeWindow && (
+                        <p>
+                          <span className="font-medium text-ink">Preferred time:</span> {timeWindow}
+                        </p>
+                      )}
+                      {alternatives.trim() && (
+                        <p>
+                          <span className="font-medium text-ink">Alternatives:</span>{" "}
+                          {alternatives.trim()}
                         </p>
                       )}
                       <p>
@@ -220,17 +303,37 @@ export default function BookingFlow({ services }: { services: ServiceOption[] })
                         <span className="font-medium text-ink">Email:</span> {form.email || "—"}
                       </p>
                     </div>
+
                     <p className="mb-6 text-sm leading-relaxed text-muted">
-                      This is a sample booking flow&mdash;nothing has been scheduled yet. Click
-                      below to send these details by email and we&rsquo;ll confirm a time with you
-                      directly.
+                      <strong className="font-semibold text-ink">This is a request, not a booking.</strong>{" "}
+                      Clicking below opens your email app with these details ready to send. Nothing is
+                      scheduled or reserved until we reply to confirm a time with you.
                     </p>
+
                     <a
                       href={mailtoHref}
+                      onClick={() => setEmailOpened(true)}
                       className="inline-flex items-center justify-center rounded-full bg-burgundy px-7 py-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-white transition-colors hover:bg-burgundy-dark"
                     >
-                      Send Request by Email
+                      Email This Request
                     </a>
+
+                    {emailOpened && (
+                      <div className="mt-6 rounded-xl border border-line bg-cream-soft p-5 text-sm leading-relaxed text-ink/80">
+                        <p className="mb-2 font-medium text-ink">Your email app should have opened.</p>
+                        <p className="mb-3">
+                          Your request is only sent once you press send in that email. If nothing opened,
+                          copy the details below and email them to{" "}
+                          <a href={`mailto:${CONTACT_EMAIL}`} className="text-burgundy hover:text-coral">
+                            {CONTACT_EMAIL}
+                          </a>
+                          .
+                        </p>
+                        <pre className="whitespace-pre-wrap break-words rounded-lg bg-white p-4 font-sans text-xs text-ink/80">
+                          {summaryLines}
+                        </pre>
+                      </div>
+                    )}
                   </div>
                 )}
               </motion.div>

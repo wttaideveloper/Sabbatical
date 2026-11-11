@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { FALLBACK_MENU_ITEMS, type MenuItem } from "@/lib/nav-links";
+import { safeHref } from "@/lib/safe-url";
 import type { MenuItemEntry, SiteSetting } from "@/lib/strapi";
 import { fontFamilyCssVar } from "@/lib/font-options";
 import { fontSizeRem } from "@/lib/font-size-options";
@@ -34,7 +35,13 @@ export default function SiteHeader({
   // Treat an empty collection the same as "unreachable" — a genuinely empty
   // header (before the admin has ever used the menu manager, or if every item
   // was removed) should show the sensible default nav, not nothing at all.
-  const items: MenuItem[] = menuItems && menuItems.length > 0 ? menuItems : FALLBACK_MENU_ITEMS;
+  // Menu hrefs come from the CMS, so unsafe ones (javascript:, data:, ...) are dropped.
+  const sourceItems: MenuItem[] = menuItems && menuItems.length > 0 ? menuItems : FALLBACK_MENU_ITEMS;
+  const safeItems = sourceItems.flatMap((item) => {
+    const href = safeHref(item.href);
+    return href ? [{ ...item, href }] : [];
+  });
+  const items: MenuItem[] = safeItems.length > 0 ? safeItems : FALLBACK_MENU_ITEMS;
   const byGroup = (group: MenuItem["group"]) =>
     items.filter((i) => i.group === group).sort((a, b) => a.order - b.order);
   const primary = byGroup("primary");

@@ -9,6 +9,12 @@ import ScrollProgress from "@/components/ScrollProgress";
 import PageTransition from "@/components/PageTransition";
 import { getMenuItems, getSiteSetting } from "@/lib/strapi";
 import { getMenuItemsPreview, getSiteSettingPreview } from "@/lib/strapi-preview";
+import { WEB_URL } from "@/lib/public-config";
+
+// Every page renders on request. Nothing CMS-derived may be baked into the build output:
+// inside a Docker build the CMS isn't reachable, so a static build would freeze fallback
+// content into the image. (CMS fetches still use a 60s revalidate window — see lib/strapi.ts.)
+export const dynamic = "force-dynamic";
 
 const montserrat = Montserrat({
   variable: "--font-montserrat",
@@ -40,13 +46,31 @@ const inter = Inter({
   weight: ["400", "500", "600"],
 });
 
+const SITE_DESCRIPTION =
+  "Clinically guided sexual health education for women navigating changes in desire, arousal, orgasm, comfort, bladder health, pelvic health, and intimacy.";
+
 export const metadata: Metadata = {
+  // Absolute base for canonical / Open Graph URLs (NEXT_PUBLIC_WEB_URL).
+  metadataBase: new URL(WEB_URL),
+  applicationName: "Intimate Sabbatical",
   title: {
     default: "Intimate Sabbatical | Sexual Health Education",
     template: "%s | Intimate Sabbatical",
   },
-  description:
-    "Clinically guided sexual health education for women navigating changes in desire, arousal, orgasm, comfort, bladder health, pelvic health, and intimacy.",
+  description: SITE_DESCRIPTION,
+  openGraph: {
+    type: "website",
+    siteName: "Intimate Sabbatical",
+    title: "Intimate Sabbatical | Sexual Health Education",
+    description: SITE_DESCRIPTION,
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary",
+    title: "Intimate Sabbatical | Sexual Health Education",
+    description: SITE_DESCRIPTION,
+  },
+  robots: { index: true, follow: true },
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

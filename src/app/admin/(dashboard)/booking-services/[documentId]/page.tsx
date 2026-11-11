@@ -1,3 +1,4 @@
+import { assertAdmin } from "@/lib/admin-auth";
 import { TextField, TextAreaField, SectionCard, FieldRow } from "@/components/admin/Fields";
 import SaveButton from "@/components/admin/SaveButton";
 import PublishButton from "@/components/admin/PublishButton";
@@ -12,6 +13,7 @@ export default async function BookingServiceEditAdmin({
   params: Promise<{ documentId: string }>;
   searchParams: Promise<{ status?: string; error?: string }>;
 }) {
+  await assertAdmin();
   const { documentId } = await params;
   const { status, error } = await searchParams;
   const isNew = documentId === "new";

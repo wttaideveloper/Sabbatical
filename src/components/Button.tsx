@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ReactNode } from "react";
 import { motion } from "motion/react";
+import { isExternalHref, safeHref } from "@/lib/safe-url";
 
 type Variant = "primary" | "outline" | "cream" | "ghost-light";
 
@@ -32,7 +33,12 @@ export default function Button({
 }) {
   const classes = `inline-flex items-center justify-center gap-2 rounded-full px-7 py-4 text-[11px] font-semibold uppercase tracking-[0.14em] transition-colors duration-200 ${VARIANT_CLASSES[variant]} ${className}`;
 
-  const isExternal = href.startsWith("mailto:") || href.startsWith("http");
+  // Admin-controlled links are validated here as well as on save: javascript:, data:,
+  // file: and other unsafe targets never render as a button.
+  const safe = safeHref(href);
+  if (!safe) return null;
+
+  const isExternal = isExternalHref(safe);
   const motionProps = {
     whileHover: { scale: 1.03 },
     whileTap: { scale: 0.97 },
@@ -41,14 +47,14 @@ export default function Button({
 
   if (isExternal) {
     return (
-      <motion.a href={href} className={classes} {...motionProps}>
+      <motion.a href={safe} className={classes} {...motionProps}>
         {children}
       </motion.a>
     );
   }
 
   return (
-    <MotionLink href={href} className={classes} {...motionProps}>
+    <MotionLink href={safe} className={classes} {...motionProps}>
       {children}
     </MotionLink>
   );

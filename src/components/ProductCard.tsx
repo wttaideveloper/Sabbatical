@@ -4,9 +4,19 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion } from "motion/react";
 import { CONTACT_EMAIL } from "@/lib/nav-links";
-import type { Product } from "@/lib/dummy-data";
 
-export default function ProductCard({ product }: { product: Product }) {
+export type ProductCardData = {
+  id: string;
+  name: string;
+  category: string;
+  price: number;
+  blurb: string;
+  /** CSS gradient shown when the product has no image. */
+  swatch: string;
+  imageUrl?: string;
+};
+
+export default function ProductCard({ product }: { product: ProductCardData }) {
   return (
     <motion.article
       className="flex flex-col overflow-hidden rounded-2xl border border-line bg-white"

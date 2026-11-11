@@ -1,5 +1,6 @@
 "use server";
 
+import { assertAdmin } from "@/lib/admin-auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
@@ -15,6 +16,7 @@ import type { MenuItemEntry } from "@/lib/strapi";
 const UID = "menu-items";
 
 export async function loadMenuItems() {
+  await assertAdmin();
   return listCollectionForEdit<MenuItemEntry>(UID, "order:asc");
 }
 
@@ -48,6 +50,7 @@ async function saveGroup(
 }
 
 export async function saveMenu(mode: "draft" | "publish", formData: FormData) {
+  await assertAdmin();
   try {
     await saveGroup(formData, "primaryItems", "primary", mode);
     await saveGroup(formData, "servicesItems", "services", mode);

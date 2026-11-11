@@ -1,3 +1,4 @@
+import { assertAdmin } from "@/lib/admin-auth";
 import { TextField, TextAreaField, RichTextField, SectionCard, FieldRow } from "@/components/admin/Fields";
 import MediaField from "@/components/admin/MediaField";
 import SaveButton from "@/components/admin/SaveButton";
@@ -14,6 +15,7 @@ export default async function BlogEditAdmin({
   params: Promise<{ documentId: string }>;
   searchParams: Promise<{ status?: string; error?: string }>;
 }) {
+  await assertAdmin();
   const { documentId } = await params;
   const { status, error } = await searchParams;
   const isNew = documentId === "new";

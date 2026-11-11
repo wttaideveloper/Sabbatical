@@ -7,6 +7,7 @@ import CtaBand from "@/components/CtaBand";
 import VideoEmbed from "@/components/VideoEmbed";
 import CustomSections from "@/components/CustomSections";
 import { getGroupSessionsPage, toParagraphs } from "@/lib/strapi";
+import { CONTACT_EMAIL } from "@/lib/public-config";
 
 export const metadata: Metadata = {
   title: "Group Sessions",
@@ -142,7 +143,7 @@ export default async function GroupSessionsPage() {
         }
         primaryCta={{
           label: "Ask About the Next Series",
-          href: "mailto:hello@intimatesabbatical.com?subject=Group%20Sessions",
+          href: `mailto:${CONTACT_EMAIL}?subject=Group%20Sessions`,
         }}
       />
 

@@ -1,0 +1,10 @@
+# Files that run on Linux (in containers or on the VPS) must keep LF line endings even when
+# checked out on Windows, where core.autocrlf would otherwise convert them to CRLF and break them
+# ("bad interpreter: /bin/bash^M", Dockerfile parse errors, nginx template noise).
+*.sh              text eol=lf
+Dockerfile        text eol=lf
+*.dockerignore    text eol=lf
+.dockerignore     text eol=lf
+docker-compose.yml text eol=lf
+*.template        text eol=lf
+.env.example      text eol=lf

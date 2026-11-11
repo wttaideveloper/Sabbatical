@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { mediaUrl } from "@/lib/cms-media";
 
 type Kind = "image" | "video";
 
@@ -29,26 +30,30 @@ export default function MediaField({
     <div className="flex flex-col gap-2.5">
       <span className="text-[13px] font-semibold uppercase tracking-[0.06em] text-admin-muted">{label}</span>
 
-      <div className="inline-flex w-fit rounded-full border border-admin-border bg-admin-bg p-1">
-        <button
-          type="button"
-          onClick={() => setMode("upload")}
-          className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${
-            mode === "upload" ? "bg-white text-burgundy shadow-sm" : "text-admin-muted hover:text-ink"
-          }`}
-        >
-          Upload File
-        </button>
-        <button
-          type="button"
-          onClick={() => setMode("link")}
-          className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${
-            mode === "link" ? "bg-white text-burgundy shadow-sm" : "text-admin-muted hover:text-ink"
-          }`}
-        >
-          Use a Link
-        </button>
-      </div>
+      {/* Images can only be uploaded. Remote URL fetching was removed (SSRF); video fields
+          may still hold a typed YouTube/Vimeo link, which is stored as text and never fetched. */}
+      {isVideo && (
+        <div className="inline-flex w-fit rounded-full border border-admin-border bg-admin-bg p-1">
+          <button
+            type="button"
+            onClick={() => setMode("upload")}
+            className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${
+              mode === "upload" ? "bg-white text-burgundy shadow-sm" : "text-admin-muted hover:text-ink"
+            }`}
+          >
+            Upload File
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("link")}
+            className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${
+              mode === "link" ? "bg-white text-burgundy shadow-sm" : "text-admin-muted hover:text-ink"
+            }`}
+          >
+            Use a Link
+          </button>
+        </div>
+      )}
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div
@@ -58,21 +63,11 @@ export default function MediaField({
         >
           {mode === "upload" && preview ? (
             isVideo ? (
-              <video src={preview} muted controls className="h-full w-full object-cover" />
+              <video src={mediaUrl(preview) ?? preview} muted controls className="h-full w-full object-cover" />
             ) : (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={preview} alt="" className="h-full w-full object-cover" />
             )
-          ) : mode === "link" && linkValue && !isVideo ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={linkValue}
-              alt=""
-              className="h-full w-full object-cover"
-              onError={(e) => {
-                e.currentTarget.style.visibility = "hidden";
-              }}
-            />
           ) : (
             <span className="px-2 text-center text-[10px] leading-snug text-admin-muted">
               {mode === "link" ? "Link preview" : isVideo ? "No video yet" : "No image yet"}
@@ -98,7 +93,7 @@ export default function MediaField({
               name={`${name}Link`}
               defaultValue={linkValue}
               onChange={(e) => setLinkValue(e.target.value)}
-              placeholder={isVideo ? "https://youtube.com/watch?v=..." : "https://example.com/photo.jpg"}
+              placeholder="YouTube or Vimeo link, e.g. https://youtube.com/watch?v=..."
               className="w-full rounded-xl border border-admin-border bg-white px-4 py-3 text-[15px] text-ink outline-none transition-colors focus:border-burgundy focus:ring-4 focus:ring-burgundy/10"
             />
           )}

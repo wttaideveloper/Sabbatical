@@ -1,41 +1,52 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import {
-  ADMIN_SESSION_COOKIE,
-  getExpectedSessionToken,
-  isAdminPasswordConfigured,
-  verifyPassword,
+  checkLoginAllowed,
+  clearLoginFailures,
+  endAdminSession,
+  getAdminConfigStatus,
+  getClientIp,
+  passwordMatches,
+  recordLoginFailure,
+  safeAdminPath,
+  startAdminSession,
 } from "@/lib/admin-auth";
 
-export async function loginAction(formData: FormData) {
-  const from = String(formData.get("from") || "/admin");
-  const password = String(formData.get("password") || "");
+// NOTE: loginAction and logoutAction intentionally do NOT call assertAdmin() —
+// the login action must be reachable while signed out, and logout must always work.
 
-  if (!isAdminPasswordConfigured()) {
-    redirect("/admin/login?error=not-configured");
+const MAX_PASSWORD_LENGTH = 256;
+
+export async function loginAction(formData: FormData) {
+  const from = safeAdminPath(String(formData.get("from") || "/admin"));
+
+  const configStatus = getAdminConfigStatus();
+  if (configStatus === "missing") redirect("/admin/login?error=not-configured");
+  if (configStatus === "weak") redirect("/admin/login?error=weak-config");
+
+  const ip = await getClientIp();
+  if (!checkLoginAllowed(ip).allowed) {
+    redirect("/admin/login?error=rate-limited");
   }
 
-  if (!verifyPassword(password)) {
+  const password = String(formData.get("password") || "");
+  const valid = password.length > 0 && password.length <= MAX_PASSWORD_LENGTH && (await passwordMatches(password));
+
+  if (!valid) {
+    recordLoginFailure(ip);
     redirect(`/admin/login?error=invalid&from=${encodeURIComponent(from)}`);
   }
 
-  const token = await getExpectedSessionToken();
-  const store = await cookies();
-  store.set(ADMIN_SESSION_COOKIE, token!, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60 * 8,
-  });
+  clearLoginFailures(ip);
 
-  redirect(from.startsWith("/admin") ? from : "/admin");
+  const started = await startAdminSession();
+  if (!started) redirect("/admin/login?error=not-configured");
+
+  redirect(from);
 }
 
 export async function logoutAction() {
-  const store = await cookies();
-  store.delete(ADMIN_SESSION_COOKIE);
+  await endAdminSession();
   redirect("/admin/login");
 }

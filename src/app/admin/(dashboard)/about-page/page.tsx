@@ -1,3 +1,4 @@
+import { assertAdmin } from "@/lib/admin-auth";
 import { TextField, TextAreaField, RichTextField, SectionCard, FieldRow } from "@/components/admin/Fields";
 import MediaField from "@/components/admin/MediaField";
 import ColorField from "@/components/admin/ColorField";
@@ -16,6 +17,7 @@ export default async function AboutPageAdmin({
 }: {
   searchParams: Promise<{ status?: string; error?: string }>;
 }) {
+  await assertAdmin();
   const { status, error } = await searchParams;
   const { data } = await loadAboutPage();
   const draftAction = saveAboutPage.bind(null, "draft");
